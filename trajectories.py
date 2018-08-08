@@ -84,14 +84,11 @@ def make_trajectory(shape, curr_state, x_index, y_index):
         my_list.append(np.array([curr_x+4, curr_y]))
         my_list.append(np.array([curr_x+4, curr_y]))
         
-    
-
     if(shape=='figure8'):
         pass
 
     my_list = np.array(my_list)
-    #print my_list.shape
-
+    return my_list
 
     # my_list.append(np.array([curr_x, curr_y]))
     # my_list.append(np.array([curr_x+1, curr_y+1]))
