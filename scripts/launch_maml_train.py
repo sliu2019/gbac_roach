@@ -44,7 +44,7 @@ def run(d):
     #restore old dynamics model
     old_exp_name = 'MAML_roach/terrain_types__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
     old_model_num = 0
-    previous_dynamics_model = '/home/nagaban2/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
+    previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
     previous_dynamics_model = None
 
     num_steps_per_rollout=50
@@ -61,6 +61,7 @@ def run(d):
     state_representation = "exclude_x_y" #["exclude_x_y", "all"]
 
     #don't change much
+    default_addrs= [b'\x00\x01']
     use_pid_mode = True      
     slow_pid_mode = True
     visualize_rviz=True   #turning this off can make things go faster
@@ -173,12 +174,17 @@ def run(d):
     ###########################################################
 
     # create regressor (NN dynamics model)
-    regressor = DeterministicMLPRegressor(inputSize, outputSize, **config['model'], dim_obs=outputSize, tf_datatype=tf_datatype)
+    regressor = DeterministicMLPRegressor(inputSize, outputSize, dim_obs=outputSize, tf_datatype=tf_datatype, **config['model'])
 
     # create policy (MPC controller)
     policy = Policy(regressor, inputSize, outputSize, 
-                    left_min, right_min, left_max, right_max, 
-                    **config['policy'], **config['roach'])
+                    left_min, right_min, left_max, right_max, state_representation=state_representation,
+                    visualize_rviz=config['roach']['visualize_rviz'], 
+                    x_index=config['roach']['x_index'], 
+                    y_index=config['roach']['y_index'], 
+                    yaw_cos_index=config['roach']['yaw_cos_index'],
+                    yaw_sin_index=config['roach']['yaw_sin_index'], 
+                    **config['policy'])
 
     # create MAML model
         # note: this also constructs the actual regressor network/weights
@@ -220,12 +226,12 @@ def run(d):
     ###########################################################
 
     #create controller node
-    controller_node = GBAC_Controller(policy=policy, use_pid_mode=use_pid_mode, **config['roach'])
+    controller_node = GBAC_Controller(policy=policy, state_representation=state_representation, use_pid_mode=use_pid_mode, default_addrs=default_addrs, **config['roach'])
 
     #do 1 rollout
     print("\n\n\nPAUSING... right before a controller run... RESET THE ROBOT TO A GOOD LOCATION BEFORE CONTINUING...")
-    IPython.embed()
-    resulting_x, selected_u, desired_seq, list_robot_info, list_mocap_info, old_saving_format_dict = controller.run(num_steps_per_rollout, desired_shape_for_rollout)
+    #IPython.embed()
+    resulting_x, selected_u, desired_seq, list_robot_info, list_mocap_info, old_saving_format_dict = controller_node.run(num_steps_per_rollout, desired_shape_for_rollout)
     
     #where to save this rollout
     pathStartName = save_dir + '/saved_rollouts/'+rollout_save_filename+ '_aggIter' +str(curr_agg_iter)

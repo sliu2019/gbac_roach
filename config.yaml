@@ -19,7 +19,6 @@ roach:
     frequency_value: 10
     serial_port: '/dev/ttyUSB0'
     baud_rate: 57600
-    default_addrs: ['\x00\x01']
     visualize_rviz: True
     x_index: 0
     y_index: 1
