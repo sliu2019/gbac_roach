@@ -10,6 +10,7 @@ from rllab.spaces.box import Box
 import IPython
 
 #roach stuff
+from nn_dynamics_roach.msg import velroach_msg
 import rospy
 from trajectories import make_trajectory
 from rospy.exceptions import ROSException
@@ -20,15 +21,17 @@ from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float32MultiArray
 from roach_utils import *
 
+
 class GBAC_Controller(object):
     def __init__(
             self,
             policy,
             use_pid_mode=True,
+            state_representation='all',
             frequency_value= 10,
             serial_port= '/dev/ttyUSB0',
             baud_rate= 57600,
-            default_addrs= ['\x00\x01'],#anything after this is unused by this code
+            default_addrs= None,#anything after this is unused by this code
             x_index= 0,
             y_index= 1,
             yaw_cos_index= 10,
@@ -36,6 +39,7 @@ class GBAC_Controller(object):
             visualize_rviz= True,
     ):
         self.policy = policy
+        self.state_representation = state_representation
         self.use_pid_mode = use_pid_mode
         self.frequency_value = frequency_value
         self.serial_port = serial_port
@@ -52,6 +56,7 @@ class GBAC_Controller(object):
         #init node
         rospy.init_node('MAML_roach_controller_node', anonymous=True)
         self.rate = rospy.Rate(self.frequency_value) 
+
         self.xb, self.robots, shared.imu_queues = setup_roach(self.serial_port, self.baud_rate, self.default_addrs, self.use_pid_mode, 1)
         
         #set PID gains
@@ -96,6 +101,7 @@ class GBAC_Controller(object):
         #init vars
         step=0
         optimal_action=[0,0]
+        time.sleep(1)
 
         while True:
 
