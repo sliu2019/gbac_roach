@@ -62,9 +62,10 @@ class Velociroach:
 
     def clAnnounce(self):
         print("DST: 0x%02X | " % self.DEST_ADDR_int)
-    
+
     def tx(self, status, type, data=''):
         payload = chr(status) + chr(type) + ''.join(data)
+        ##alternative: try to convert everything to byte array? to make it work for py3
         self.xb.tx(dest_addr = self.DEST_ADDR, data = payload)
         
     def reset(self):
