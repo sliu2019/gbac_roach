@@ -7,6 +7,8 @@ import time
 import matplotlib
 from rllab.envs.env_spec import EnvSpec
 from rllab.spaces.box import Box
+from visualization_msgs.msg import Marker
+from visualization_msgs.msg import MarkerArray
 import IPython
 
 class NaiveMPCController(Policy, Serializable):
@@ -19,6 +21,7 @@ class NaiveMPCController(Policy, Serializable):
             right_min, 
             left_max, 
             right_max,
+            state_representation='all',
             n_candidates=1000,
             horizon=10,
             horiz_penalty_factor=30,
@@ -29,7 +32,6 @@ class NaiveMPCController(Policy, Serializable):
             y_index=1,
             yaw_cos_index=10,
             yaw_sin_index=11,
-            default_addrs=None,#anything after this in unused in this func
             test_regressor=False,
             frequency_value=10,
             serial_port=None,
@@ -37,6 +39,7 @@ class NaiveMPCController(Policy, Serializable):
     ):
         self.regressor = regressor
         self.visualize_rviz = visualize_rviz
+        self.state_representation=state_representation
 
         #from config['policy']
         self.n_candidates = n_candidates
@@ -78,7 +81,7 @@ class NaiveMPCController(Policy, Serializable):
         return True
 
     #distance needed for unit 2 to go toward unit1.... NOT THE CORRECT SIGN
-    def moving_distance(unit1, unit2):
+    def moving_distance(self, unit1, unit2):
       phi = (unit2-unit1) % (2*np.pi)
       phi[phi > np.pi] = (2*np.pi-phi)[phi > np.pi]
       return phi
@@ -153,15 +156,15 @@ class NaiveMPCController(Policy, Serializable):
             observation = next_observation
 
         #evaluate all options and pick the best one
-        optimal_action, curr_line_segment, old_curr_forward, info_for_saving = select_the_best_one_for_traj_follow(full_curr_state, a, resulting_states, curr_line_segment, old_curr_forward)
+        optimal_action, curr_line_segment, old_curr_forward, info_for_saving = self.select_the_best_one_for_traj_follow(full_curr_state, a, np.array(resulting_states), curr_line_segment, old_curr_forward)
 
-        return optimal_action
+        return optimal_action, curr_line_segment, old_curr_forward, info_for_saving
 
     #################################################
     ##### ACTION SELECTION when trajectory following
     #################################################
 
-    def select_the_best_one_for_traj_follow(full_curr_state, all_samples, resulting_states, curr_line_segment, old_curr_forward):
+    def select_the_best_one_for_traj_follow(self, full_curr_state, all_samples, resulting_states, curr_line_segment, old_curr_forward):
 
         desired_states= self.desired_states
         
@@ -176,8 +179,8 @@ class NaiveMPCController(Policy, Serializable):
         
         ############ closest distance from point to current line segment
         #vars
-        a = full_curr_state[x_index]- curr_start[0]
-        b = full_curr_state[y_index]- curr_start[1]
+        a = full_curr_state[self.x_index]- curr_start[0]
+        b = full_curr_state[self.y_index]- curr_start[1]
         c = curr_end[0]- curr_start[0]
         d = curr_end[1]- curr_start[1]
         #project point onto line segment
@@ -193,14 +196,14 @@ class NaiveMPCController(Policy, Serializable):
             closest_pt_x= curr_start[0] + np.multiply(which_line_section,c)
             closest_pt_y= curr_start[1] + np.multiply(which_line_section,d)
         #min dist from pt to that closest point (ie closes dist from pt to line segment)
-        min_perp_dist = np.sqrt((full_curr_state[x_index]-closest_pt_x)*(full_curr_state[x_index]-closest_pt_x) + (full_curr_state[y_index]-closest_pt_y)*(full_curr_state[y_index]-closest_pt_y))
+        min_perp_dist = np.sqrt((full_curr_state[self.x_index]-closest_pt_x)*(full_curr_state[self.x_index]-closest_pt_x) + (full_curr_state[self.y_index]-closest_pt_y)*(full_curr_state[self.y_index]-closest_pt_y))
         #"forward-ness" of the pt... for each sim
         curr_forward = which_line_section
         
         ############ closest distance from point to next line segment
         #vars
-        a = full_curr_state[x_index]- next_start[0]
-        b = full_curr_state[y_index]- next_start[1]
+        a = full_curr_state[self.x_index]- next_start[0]
+        b = full_curr_state[self.y_index]- next_start[1]
         c = next_end[0]- next_start[0]
         d = next_end[1]- next_start[1]
         #project point onto line segment
@@ -216,16 +219,16 @@ class NaiveMPCController(Policy, Serializable):
             closest_pt_x= next_start[0] + np.multiply(which_line_section,c)
             closest_pt_y= next_start[1] + np.multiply(which_line_section,d)
         #min dist from pt to that closest point (ie closes dist from pt to line segment)
-        dist = np.sqrt((full_curr_state[x_index]-closest_pt_x)*(full_curr_state[x_index]-closest_pt_x) + (full_curr_state[y_index]-closest_pt_y)*(full_curr_state[y_index]-closest_pt_y))
+        dist = np.sqrt((full_curr_state[self.x_index]-closest_pt_x)*(full_curr_state[self.x_index]-closest_pt_x) + (full_curr_state[self.y_index]-closest_pt_y)*(full_curr_state[self.y_index]-closest_pt_y))
         
         #pick which line segment it's closest to, and update vars accordingly
         moved_to_next = False
         if(dist<min_perp_dist):
             print(" **************************** MOVED ONTO NEXT LINE SEG")
-        curr_line_segment+=1
-        curr_forward= which_line_section
-        min_perp_dist = np.copy(dist)
-        moved_to_next = True
+            curr_line_segment+=1
+            curr_forward= which_line_section
+            min_perp_dist = np.copy(dist)
+            moved_to_next = True
 
         ########################################
         #### headings
@@ -234,7 +237,7 @@ class NaiveMPCController(Policy, Serializable):
         curr_start = desired_states[curr_line_segment]
         curr_end = desired_states[curr_line_segment+1]
         desired_yaw = np.arctan2(curr_end[1]-curr_start[1], curr_end[0]-curr_start[0])
-        curr_yaw = np.arctan2(full_curr_state[yaw_sin_index],full_curr_state[yaw_cos_index])
+        curr_yaw = np.arctan2(full_curr_state[self.yaw_sin_index],full_curr_state[self.yaw_cos_index])
 
         ########################################
         #### save vars
@@ -281,8 +284,8 @@ class NaiveMPCController(Policy, Serializable):
             ############ closest distance from point to current line segment
 
             #vars
-            a = pt[:,x_index]- curr_start[:,0]
-            b = pt[:,y_index]- curr_start[:,1]
+            a = pt[:,self.x_index]- curr_start[:,0]
+            b = pt[:,self.y_index]- curr_start[:,1]
             c = curr_end[:,0]- curr_start[:,0]
             d = curr_end[:,1]- curr_start[:,1]
 
@@ -300,7 +303,7 @@ class NaiveMPCController(Policy, Serializable):
             closest_pt_y[np.logical_and(which_line_section<=1, which_line_section>=0)] = (curr_start[:,1] + np.multiply(which_line_section,d))[np.logical_and(which_line_section<=1, which_line_section>=0)]
 
             #min dist from pt to that closest point (ie closes dist from pt to line segment)
-            min_perp_dist = np.sqrt((pt[:,x_index]-closest_pt_x)*(pt[:,x_index]-closest_pt_x) + (pt[:,y_index]-closest_pt_y)*(pt[:,y_index]-closest_pt_y))
+            min_perp_dist = np.sqrt((pt[:,self.x_index]-closest_pt_x)*(pt[:,self.x_index]-closest_pt_x) + (pt[:,self.y_index]-closest_pt_y)*(pt[:,self.y_index]-closest_pt_y))
 
             #"forward-ness" of the pt... for each sim
             curr_forward = which_line_section
@@ -308,8 +311,8 @@ class NaiveMPCController(Policy, Serializable):
             ############ closest distance from point to next line segment
 
             #vars
-            a = pt[:,x_index]- next_start[:,0]
-            b = pt[:,y_index]- next_start[:,1]
+            a = pt[:,self.x_index]- next_start[:,0]
+            b = pt[:,self.y_index]- next_start[:,1]
             c = next_end[:,0]- next_start[:,0]
             d = next_end[:,1]- next_start[:,1]
 
@@ -327,7 +330,7 @@ class NaiveMPCController(Policy, Serializable):
             closest_pt_y[np.logical_and(which_line_section<=1, which_line_section>=0)] = (next_start[:,1] + np.multiply(which_line_section,d))[np.logical_and(which_line_section<=1, which_line_section>=0)]
 
             #min dist from pt to that closest point (ie closes dist from pt to line segment)
-            dist = np.sqrt((pt[:,x_index]-closest_pt_x)*(pt[:,x_index]-closest_pt_x) + (pt[:,y_index]-closest_pt_y)*(pt[:,y_index]-closest_pt_y))
+            dist = np.sqrt((pt[:,self.x_index]-closest_pt_x)*(pt[:,self.x_index]-closest_pt_x) + (pt[:,self.y_index]-closest_pt_y)*(pt[:,self.y_index]-closest_pt_y))
 
             #pick which line segment it's closest to, and update vars accordingly
             curr_seg[dist<=min_perp_dist] += 1
@@ -340,16 +343,16 @@ class NaiveMPCController(Policy, Serializable):
             ########################################
 
             #penalize horiz dist
-            scores += min_perp_dist*horiz_penalty_factor
+            scores += min_perp_dist*self.horiz_penalty_factor
 
             #penalize moving backward
-            scores[moved_to_next==0] += (prev_forward - curr_forward)[moved_to_next==0]*backward_discouragement
+            scores[moved_to_next==0] += (prev_forward - curr_forward)[moved_to_next==0]*self.backward_discouragement
 
             #penalize heading away from angle of line
             desired_yaw = np.arctan2(curr_end[:,1]-curr_start[:,1], curr_end[:,0]-curr_start[:,0])
-            curr_yaw = np.arctan2(pt[:,yaw_sin_index],pt[:,yaw_cos_index])
-            diff = np.abs(moving_distance(desired_yaw, curr_yaw))
-            scores += diff*heading_penalty_factor
+            curr_yaw = np.arctan2(pt[:,self.yaw_sin_index],pt[:,self.yaw_cos_index])
+            diff = np.abs(self.moving_distance(desired_yaw, curr_yaw))
+            scores += diff*self.heading_penalty_factor
 
             #update
             prev_forward = np.copy(curr_forward)
@@ -361,7 +364,7 @@ class NaiveMPCController(Policy, Serializable):
 
         best_score = np.min(scores)
         best_sim_number = np.argmin(scores) 
-        best_sequence = all_samples[best_sim_number]
+        best_sequence = all_samples[:,best_sim_number,:]
 
         if(self.visualize_rviz):
             #publish the desired traj
@@ -427,7 +430,6 @@ class NaiveMPCController(Policy, Serializable):
         #the 0th entry is the currently executing action... so the 1st entry is the optimal action to take
         action_to_take = np.copy(best_sequence[1])
 
-        #return
         return action_to_take, curr_line_segment, old_curr_forward, info_for_saving
 
 
