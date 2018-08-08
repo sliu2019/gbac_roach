@@ -12,7 +12,9 @@ from struct import pack,unpack
 from xbee import XBee
 from math import ceil,floor
 import numpy as np
+import sys
 import IPython
+
 # TODO: check with firmware if this value is actually correct
 PHASE_180_DEG = 0x8000
 
@@ -63,9 +65,31 @@ class Velociroach:
     def clAnnounce(self):
         print("DST: 0x%02X | " % self.DEST_ADDR_int)
 
-    def tx(self, status, type, data=''):
-        payload = chr(status) + chr(type) + ''.join(data)
-        ##alternative: try to convert everything to byte array? to make it work for py3
+    def tx(self, status, mytype, data=''):
+
+        
+        if(sys.version_info[0]<3):
+            payload = chr(status) + chr(mytype) + ''.join(data)
+            #payload=bytearray(payload) #even this works...
+        else:
+            #print("\n\nINSIDE TX in velociroach...")
+            #import IPython
+            #IPython.embed()
+
+            a = chr(status) # Type: string (Unicode in Py 3)
+            a = bytes(a, "utf-8") # Type: byte object
+            a = bytearray(a) # Type; bytearray
+            a.append(mytype) 
+
+            if(data==''):
+                c = bytearray(0)
+            elif(data=='zero'):
+                c = bytearray(0)
+            else:
+                c = bytearray(data)
+            payload = a + c # Type: bytearray
+            payload=bytes(payload)
+
         self.xb.tx(dest_addr = self.DEST_ADDR, data = payload)
         
     def reset(self):
