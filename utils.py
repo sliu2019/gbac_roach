@@ -21,7 +21,8 @@ def whichFiles(itr, experiment_type):
   
   if(itr==0):
     #random data
-    data_path = "/media/camera_training_data"
+    #data_path = "/media/camera_training_data"
+    data_path = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/camera_training_data"
   else:
     print("\n\nNOT IMPLEMENTED: getting data (for anything other than random)...")
     IPython.embed()
