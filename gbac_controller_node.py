@@ -55,6 +55,7 @@ class GBAC_Controller(object):
         
         #init node
         rospy.init_node('MAML_roach_controller_node', anonymous=True)
+        self.callback_mocap(rospy.wait_for_message("/mocap/pose", PoseStamped))
         self.rate = rospy.Rate(self.frequency_value) 
 
         self.xb, self.robots, shared.imu_queues = setup_roach(self.serial_port, self.baud_rate, self.default_addrs, self.use_pid_mode, 1)
@@ -101,7 +102,6 @@ class GBAC_Controller(object):
         #init vars
         step=0
         optimal_action=[0,0]
-        time.sleep(1)
 
         while True:
 
