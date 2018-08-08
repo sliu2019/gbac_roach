@@ -3,8 +3,11 @@ import shared_multi as shared
 from velociroach import *
 from utils import *
 from collections import OrderedDict
-#from queue import Queue #for python3
-from Queue import Queue
+
+if(sys.version_info[0]>2):
+	from queue import Queue #for python3
+else:
+	from Queue import Queue
 
 def setup_roach(serial_port, baud_rate, default_addrs, use_pid_mode, top):
 
