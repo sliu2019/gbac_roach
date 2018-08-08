@@ -61,8 +61,8 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
         #which 2k consective datapoints, from that rollout
         i = np.random.randint(2*update_bs, len(inputs_full[which_task][which_path]))
         idxs_ts.append(np.arange(i - 2*update_bs, i))
-      outputs_batch = np.array([outputs_full[task][path][ts] for task, path, ts in zip(idxs_task, idxs_path, idxs_ts)])
-      inputs_batch = np.array([inputs_full[task][path][ts] for task, path, ts in zip(idxs_task, idxs_path, idxs_ts)])
+      outputs_batch = np.array([outputs_full[task][path_num][ts] for task, path_num, ts in zip(idxs_task, idxs_path, idxs_ts)])
+      inputs_batch = np.array([inputs_full[task][path_num][ts] for task, path_num, ts in zip(idxs_task, idxs_path, idxs_ts)])
 
       #use the 1st half as training data for inner-loop gradient
       inputa = inputs_batch[:, :update_bs, :]
