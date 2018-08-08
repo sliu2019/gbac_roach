@@ -1,0 +1,88 @@
+
+seed: 0
+
+experiment_type: terrain_types                      # Name of the task
+curr_agg_iter: 0
+
+training:
+    meta_batch_size: 8                   # Number of tasks sampled per meta-update
+    update_batch_size: 10                # Number of data points per inner-update ("K" in k-shot learning)
+    meta_lr: 0.001                       # Meta learning rate
+    update_lr: 0.01                      # Inner-update learning rate
+    num_updates: 1                       # Number of inner updates
+    meta_loss: False                     # If True, learns the loss in the inner-update
+    stop_grad: False                     # If True, do not use second derivatices in the inner-update
+    multistep_loss: False
+    steps: 1
+
+roach:
+    frequency_value: 10
+    serial_port: '/dev/ttyUSB0'
+    baud_rate: 57600
+    default_addrs: ['\x00\x01']
+    visualize_rviz: True
+    x_index: 0
+    y_index: 1
+    yaw_cos_index: 10
+    yaw_sin_index: 11
+
+model:
+    norm: None                          # Norm options: [None, 'batch_norm', 'layer_norm']
+    dim_hidden:                         # Dimension of the hidden layers
+        - 500
+        - 500
+    dim_conv1d:                         # Dimension of the 1d convolutions when learning the inner loss
+        - 8
+        - 8
+        - 8
+    dim_bias: 5
+
+sampler:     
+    batch_size: 200                     # Total number of datapoints collected during each data collection session (PER task)
+        #5 rollouts per each of 4 surfaces = 20 rollouts = 1k pts ... make batchsize 200
+    max_path_length: 50                 # Maximum path length
+    max_epochs: 30                      # Maximum number of epochs before collecting new data
+    n_itr_rand: 1                       # Number of times we collect random data (instead of on-policy data)
+    max_buffer: 10000000                # Maximum number of timesteps in our buffer (used for retraining dynamics model)
+    train_policy: False
+    n_itr_policy: 5 ##????????
+    multi_input: 0
+
+logging:
+    log: True                           # Enables/Disables all the logging options
+    resume: False                       # Resume the training
+    train: True                         # Train vs. testing
+    test_itr: -1                        # Iteration to load model (-1 for the latest model)
+    save_itr: 10                        # Number of gradient updates between saving the model
+    print_itr: 10                       # Number of gradient updates between printing results
+    summary_itr: 10                     # Number of gradient updates between summarizing results
+    log_dir: 'MAML_roach/'              # Directory where we save the MAML data
+    resume_dir: ''
+
+policy:
+    n_candidates: 1000                   # Number of candidates actions when performing MPC
+    horizon: 5                          # Horizon of the planning in the MPC
+    test_regressor: False
+    horiz_penalty_factor: 30
+    backward_discouragement: 10
+    heading_penalty_factor: 5
+
+testing:
+    animated: False                       # If True, renders the test rollouts
+    file: '/home/ignasi/data_lta/CRIPPLE/MAML/HalfCheetahEnv__cripple__multi_updates_1__meta_batch_size_32__meta_learn_lr_False__update_batch_size_32__batch_size_2000__num_updates_1__multi_input_0__update_lr_0.001__dim_bias_0__seed_605__metatrain_itr_10/'
+    meta_batch_size: 1                  # Number of tasks sampled per meta-update
+    update_batch_size: 10                 # Number of data points per inner-update ("K" in k-shot learning)
+    max_path_length: 50                 # Max length of rollout
+    num_rollouts: 1                    # Number of rollouts to perform for testing
+    speedup: 1                           # Factor by which to speed-up the rendering of the rollouts
+    meta_loss: False                     # If True, learns the loss in the inner-update
+    stop_grad: False                     # If True, do not use second derivatices in the inner-update
+    meta_lr: 0.001
+    update_lr: 0.01
+    render:
+        stationary_camera: False
+        xpos: 0
+        ypos: 0
+        width: 1000
+        height: 1000
+        title: 'Test'
