@@ -70,8 +70,8 @@ class GBAC_Controller(object):
 
         #make publishers
         self.publish_robotinfo= rospy.Publisher('/robot0/robotinfo', velroach_msg, queue_size=5)
-        self.publish_markers= self.policy.publish_markers = rospy.Publisher('visualize_selected', MarkerArray, queue_size=5)
-        self.publish_markers_desired= self.policy.publish_markers_desired = rospy.Publisher('visualize_desired', MarkerArray, queue_size=5)
+        self.policy.publish_markers = rospy.Publisher('visualize_selected', MarkerArray, queue_size=5)
+        self.policy.publish_markers_desired = rospy.Publisher('visualize_desired', MarkerArray, queue_size=5)
 
     def callback_mocap(self,data):
         self.mocap_info = data
@@ -191,7 +191,7 @@ class GBAC_Controller(object):
                 #return stuff to save
                 old_saving_format_dict={
                 'actions_taken': self.actions_taken,
-                'desired_states': self.desired_states,
+                'desired_states': self.policy.desired_states,
                 'traj_taken': self.traj_taken,
                 'save_perp_dist': self.save_perp_dist,
                 'save_forward_dist': self.save_forward_dist,
@@ -201,7 +201,7 @@ class GBAC_Controller(object):
                 'save_curr_heading': self.save_curr_heading,
                 }
 
-                return(self.traj_taken, self.actions_taken, self.desired_states, list_robot_info, list_mocap_info, old_saving_format_dict)
+                return(self.traj_taken, self.actions_taken, self.policy.desired_states, list_robot_info, list_mocap_info, old_saving_format_dict)
 
             ########################
             #### COMPUTE ACTION ####
@@ -211,7 +211,7 @@ class GBAC_Controller(object):
                 #create desired trajectory
                 print("starting x position: ", full_curr_state[self.x_index])
                 print("starting y position: ", full_curr_state[self.y_index])
-                self.desired_states = self.policy.desired_states = make_trajectory(desired_shape_for_rollout, np.copy(full_curr_state), self.x_index, self.y_index)
+                self.policy.desired_states = make_trajectory(desired_shape_for_rollout, np.copy(full_curr_state), self.x_index, self.y_index)
 
 
             #save traj taken
