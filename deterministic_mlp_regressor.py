@@ -2,6 +2,7 @@ import tensorflow as tf
 from sandbox.ignasi.maml.utils import normalize
 import numpy as np
 from tensorflow.python.platform import flags
+from utils import *
 
 class DeterministicMLPRegressor(object):
     def __init__(self, dim_input, dim_output, dim_hidden=(64, 64), dim_conv1d=(8, 8, 8), norm='None', dim_obs=None,
@@ -113,27 +114,15 @@ class DeterministicMLPRegressor(object):
 
     def do_forward_sim(self, states, actions, state_representation):
         #SO FAR, this func only ever gets called on a single trajectory
-        if(state_representation=='all'):
-            traj=[]
-            obs = np.expand_dims(states[0], axis=0)
+        traj=[]
+        obs = np.expand_dims(states[0], axis=0)
+        traj.append(np.squeeze(obs))
+        for h in range(len(states)):
+            use_this = create_nn_input_using_staterep(obs, state_representation, multiple=True) #its single not multiple, but shape is [1x?] so need obs[:,2:]
+            obs = self.predict(np.concatenate([use_this, np.expand_dims(actions[h], axis=0)], axis=1)) + obs
+                #[1x s] + [1x a] --> [1x (s+a)]
+                #output of predic = [1x s]
             traj.append(np.squeeze(obs))
-            for h in range(len(states)):
-                obs = self.predict(np.concatenate([obs, np.expand_dims(actions[h], axis=0)], axis=1)) + obs
-                    #[1x s] + [1x a] --> [1x (s+a)]
-                    #output of predic = [1x s]
-                traj.append(np.squeeze(obs))
-        elif(state_representation=='exclude_x_y'):
-            traj=[]
-            obs = np.expand_dims(states[0], axis=0)
-            traj.append(np.squeeze(obs))
-            for h in range(len(states)):
-                obs = self.predict(np.concatenate([obs[:,2:], np.expand_dims(actions[h], axis=0)], axis=1)) + obs
-                traj.append(np.squeeze(obs))
-        else:
-            print("\n\nERROR: not yet implemented forward sim for state_representation other than 'all' and 'exclude_x_y' ...")
-            import IPython
-            IPython.embed()
-
         return traj
 
     # evaluate and return the NN's weights and mean/std vars
