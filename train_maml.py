@@ -108,5 +108,6 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
 
   #save dynamics model
   name = 'model' + str(curr_agg_iter)
-  print('Saving model')
+  print('Saving model at: ', osp.join(path, name))
+  IPython.embed()
   saver.save(sess,  osp.join(path, name))

@@ -47,12 +47,14 @@ def run(d):
     previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
     previous_dynamics_model = None
 
-    num_steps_per_rollout=50
+    num_steps_per_rollout=10
     desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
     save_rollout_run_num = 0
     rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
     #settings
+    train_now = False
+    model_path = ""
     cheaty_training = False
     use_one_hot = False #True
     use_camera = False #True

@@ -5,8 +5,8 @@ experiment_type: terrain_types                      # Name of the task
 curr_agg_iter: 0
 
 training:
-    meta_batch_size: 8                   # Number of tasks sampled per meta-update
-    update_batch_size: 10                # Number of data points per inner-update ("K" in k-shot learning)
+    meta_batch_size: 50                   # Number of tasks sampled per meta-update
+    update_batch_size: 20                # Number of data points per inner-update ("K" in k-shot learning)
     meta_lr: 0.001                       # Meta learning rate
     update_lr: 0.01                      # Inner-update learning rate
     num_updates: 1                       # Number of inner updates
@@ -40,7 +40,7 @@ sampler:
     batch_size: 200                     # Total number of datapoints collected during each data collection session (PER task)
         #5 rollouts per each of 4 surfaces = 20 rollouts = 1k pts ... make batchsize 200
     max_path_length: 50                 # Maximum path length
-    max_epochs: 30                      # Maximum number of epochs before collecting new data
+    max_epochs: 2                      # Maximum number of epochs before collecting new data
     n_itr_rand: 1                       # Number of times we collect random data (instead of on-policy data)
     max_buffer: 10000000                # Maximum number of timesteps in our buffer (used for retraining dynamics model)
     train_policy: False
