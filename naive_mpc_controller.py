@@ -9,6 +9,7 @@ from rllab.envs.env_spec import EnvSpec
 from rllab.spaces.box import Box
 from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
+from utils import *
 import IPython
 
 class NaiveMPCController(Policy, Serializable):
@@ -148,10 +149,8 @@ class NaiveMPCController(Policy, Serializable):
                 observation = np.array(observation).reshape((1,1,-1)) #goes from [1,obs_dim] --> [1, 1, obs_dim]
                 observation = np.tile(observation, (1,n,1)).reshape((n, -1)) # tiled observations, so [N, obs_dim]
                 resulting_states.append(observation)
-            if(self.state_representation=='exclude_x_y'):
-                next_observation = self.regressor.predict(np.concatenate([observation[:,2:], a[h]], axis=1)) + observation
-            else:
-                next_observation = self.regressor.predict(np.concatenate([observation, a[h]], axis=1)) + observation #[1000 x 21]
+            use_this_obs = create_nn_input_using_staterep(observation, self.state_representation, multiple=True)
+            next_observation = self.regressor.predict(np.concatenate([use_this_obs, a[h]], axis=1)) + observation #[1000 x 21]
             resulting_states.append(next_observation)
             observation = next_observation
 
