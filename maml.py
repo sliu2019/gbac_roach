@@ -204,10 +204,13 @@ class MAML:
             #this outer update is done using metaBS*K points
 
         optimizer = tf.train.AdamOptimizer(self.meta_lr)
-        #####################self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[self.config['num_updates']-1])
-        self.gvs = gvs = optimizer.compute_gradients(self.total_loss1)
+        self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[self.config['num_updates']-1]) #this is real maml loss func (ie adapt)
         self.gvs = gvs = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in gvs]
         self.metatrain_op = optimizer.apply_gradients(gvs)
+
+        ##################### #this is just one gradient step (ie normal training)
+        ##################### #used for debugging other parts of code
+        #####################self.gvs = gvs = optimizer.compute_gradients(self.total_loss1) 
 
         ##############################################
         ## Summaries
