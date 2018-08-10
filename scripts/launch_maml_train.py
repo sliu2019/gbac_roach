@@ -42,14 +42,15 @@ from rllab.misc.instrument import VariantGenerator
 def run(d):
 
     #restore old dynamics model
-    train_now = False
-    #old_exp_name = 'MAML_roach/terrain_types__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
-    #old_model_num = 0
-    #previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
-    previous_dynamics_model = "/home/anagabandi/roach_workspace/src/gbac_roach/scripts/MAML_roach/model0"
+    train_now = True
+    restore_previous = False
+    old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
+    old_model_num = 0
+    previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
+    #previous_dynamics_model = "/home/anagabandi/roach_workspace/src/gbac_roach/scripts/MAML_roach/model0"
 
-    num_steps_per_rollout=10
-    desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
+    num_steps_per_rollout= 145
+    desired_shape_for_rollout = "right"                     #straight, left, right, circle_left, zigzag, figure8
     save_rollout_run_num = 0
     rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
@@ -102,7 +103,7 @@ def run(d):
     #vars from config
     config = d['config']
     curr_agg_iter = d['curr_agg_iter']
-    save_dir = d['exp_name']
+    save_dir = '/home/anagabandi/rllab-private/data/local/experiment/' + d['exp_name']
     print("\n\nSAVING EVERYTHING TO: ", save_dir)
 
     #make directories
@@ -116,22 +117,40 @@ def run(d):
     ######################################
 
     print("\n\nCURR AGGREGATION ITER: ", curr_agg_iter)
-
+    # Training data
     dataX=[]
     dataX_full=[] #this is just for your personal use for forwardsim (for debugging)
     dataY=[]
     dataZ=[]
+
+    # Validation data
+    dataX_val = []
+    dataX_full_val=[]
+    dataY_val=[]
+    dataZ_val=[]
+
     agg_itr = 0
+    training_ratio = config['training']['training_ratio']
     for agg_itr in range(curr_agg_iter+1):
         #getDataFromDisk should give (tasks, rollouts from that task, each rollout has its points)
         dataX_curr, dataY_curr, dataZ_curr, dataX_curr_full = getDataFromDisk(agg_itr, config['experiment_type'], 
                                                                             use_one_hot, use_camera, 
                                                                             cheaty_training, state_representation)
         if(agg_itr==0):
-            dataX= copy.deepcopy(dataX_curr)
-            dataY= copy.deepcopy(dataY_curr)
-            dataZ= copy.deepcopy(dataZ_curr)
-            dataX_full= copy.deepcopy(dataX_curr_full)
+            for i in range(len(dataX_curr)):
+                taski_num_rollout = len(dataX_curr[i])
+                print("taski_num_rollout: ", taski_num_rollout)
+                dataX.append(dataX_curr[0][:int(taski_num_rollout*training_ratio)])
+
+                dataX_full.append(dataX_curr_full[0][:int(taski_num_rollout*training_ratio)])
+                dataY.append(dataY_curr[0][:int(taski_num_rollout*training_ratio)])
+                dataZ.append(dataZ_curr[0][:int(taski_num_rollout*training_ratio)])
+
+                dataX_val.append(dataX_curr[0][int(taski_num_rollout*training_ratio):])
+                dataX_full_val.append(dataX_curr_full[0][int(taski_num_rollout*training_ratio):])
+                dataY_val.append(dataY_curr[0][int(taski_num_rollout*training_ratio):])
+                dataZ_val.append(dataZ_curr[0][int(taski_num_rollout*training_ratio):])
+            #IPython.embed()
         else:
             #combine these rollouts w previous rollouts, so everything is still organized by task
             for task_num in range(len(dataX)):
@@ -140,13 +159,19 @@ def run(d):
                     dataY[task_num].append(dataY_curr[task_num][rollout_num])
                     dataZ[task_num].append(dataZ_curr[task_num][rollout_num])
                     dataX_full[task_num].append(dataX_curr_full[task_num][rollout_num])
+            # Do validation for this too! 
 
     total_num_data = len(dataX)*len(dataX[0])*len(dataX[0][0]) # numSteps = tasks * rollouts * steps
     print("\n\nTotal number of data points: ", total_num_data)
 
+    #return
     ## concatenate state and action --> inputs
     outputs = copy.deepcopy(dataZ)
     inputs = copy.deepcopy(dataX)
+
+    inputs_val = np.append(np.array(dataX_val), np.array(dataY_val), axis = 3)
+    outputs_val = np.array(dataZ_val)
+    #IPython.embed() # check shapes
     for task_num in range(len(dataX)):
         for rollout_num in range (len(dataX[task_num])):
             #dataX[task_num][rollout_num] (steps x s_dim)
@@ -210,11 +235,14 @@ def run(d):
 
     #train on the given full dataset, for max_epochs
     if train_now:
-       train(inputs, outputs, curr_agg_iter, model, saver, sess, config)
+        if(restore_previous):
+            print("\n\nRESTORING PREVIOUS DYNAMICS MODEL FROM ", previous_dynamics_model, " AND CONTINUING TRAINING...\n\n")
+            saver.restore(sess, previous_dynamics_model)
+        train(inputs, outputs, curr_agg_iter, model, saver, sess, config, inputs_val, outputs_val)
     else: 
-        print("\n\nRESTORING PREVIOUS DYNAMICS MODEL FROM ", previous_dynamics_model)
+        print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
         saver.restore(sess, previous_dynamics_model)
-
+    return
     #IPython.embed()
     predicted_traj = regressor.do_forward_sim(dataX_full[0][7][27:45], dataY[0][7][27:45], state_representation)
     #np.save(save_dir + '/forwardsim_true.npy', dataX_full[0][7][27:45])
@@ -225,7 +253,7 @@ def run(d):
     ###########################################################
 
     #create controller node
-    controller_node = GBAC_Controller(policy=policy, model=model,
+    controller_node = GBAC_Controller(sess=sess, policy=policy, model=model,
                                     state_representation=state_representation, use_pid_mode=use_pid_mode, 
                                     default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], **config['roach'])
 
@@ -236,6 +264,7 @@ def run(d):
     
     #where to save this rollout
     pathStartName = save_dir + '/saved_rollouts/'+rollout_save_filename+ '_aggIter' +str(curr_agg_iter)
+    print("\n\n************** TRYING TO SAVE EVERYTHING TO: ", pathStartName)
 
     #save the result of the run
     np.save(pathStartName + '/oldFormat_actions.npy', old_saving_format_dict['actions_taken'])
@@ -248,16 +277,20 @@ def run(d):
     np.save(pathStartName + '/oldFormat_desheading.npy', old_saving_format_dict['save_desired_heading'])
     np.save(pathStartName + '/oldFormat_currheading.npy', old_saving_format_dict['save_curr_heading'])
 
+    yaml.dump(config, open(osp.join(pathStartName, 'saved_config.yaml'), 'w'))
+
     #save the result of the run
     np.save(pathStartName + '/actions.npy', selected_u)
     np.save(pathStartName + '/states.npy', resulting_x)
     np.save(pathStartName + '/desired.npy', desired_seq)
-    pickle.dump(list_robot_info,open(pathStartName + '_robotInfo.obj','w'))
-    pickle.dump(list_mocap_info,open(pathStartName + '_mocapInfo.obj','w'))
+    pickle.dump(list_robot_info,open(pathStartName + '/robotInfo.obj','w'))
+    pickle.dump(list_mocap_info,open(pathStartName + '/mocapInfo.obj','w'))
 
     #stop roach
     print("killing robot")
     controller_node.kill_robot()
+
+    return
 
 def main(config_path, extra_config):
 
@@ -273,9 +306,9 @@ def main(config_path, extra_config):
     vg.add('config', [config])
     ##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
     vg.add('meta_batch_size', [50]) ##################
-    vg.add('update_batch_size', [20]) ############# 8 
+    vg.add('update_batch_size', [16]) ############# 8 
     vg.add('update_lr', [0.001])
-    vg.add('max_epochs', [80]) ###########################
+    vg.add('max_epochs', [2]) ########################### 3 was fine-ish on carpet
     vg.add('horizon', [5])
     vg.add('curr_agg_iter', [0])
 
@@ -292,7 +325,8 @@ def main(config_path, extra_config):
         #    [v['config']['experiment_type']] + [k + '_' + str(v) for k,v in _v.items() if k not in ['name', 'experiment_type', 'dim_hidden']])
 
 
-        v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + '__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
+        #v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + '__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
+        v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_turf_model_on_turf"
 
         run_experiment_lite(
             run,

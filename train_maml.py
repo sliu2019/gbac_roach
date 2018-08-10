@@ -10,8 +10,9 @@ import yaml
 import rllab.misc.logger as logger
 import IPython
 from utils import *
+import matplotlib.pyplot as plt
 
-def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
+def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, inputs_full_val, outputs_full_val):
 
   #get certain sections of vars from config file
   log_config = config['logging']
@@ -22,7 +23,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
 
   #init vars
   t0 = time.time()
-  prelosses, postlosses = [], []
+  prelosses, postlosses,vallosses, traininglosses = [], [], [], []
   multitask_weights, reg_weights = [], []
   total_points_per_task = len(inputs_full[0])*len(inputs_full[0][0]) #numRollouts * pointsPerRollout
 
@@ -39,7 +40,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
 
     print("\n\n************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
-    while(gradient_step*update_bs*meta_bs < total_points_per_task):
+    while(gradient_step*update_bs < total_points_per_task):
 
       ####################################################
       ## randomly select batch of data, for 1 outer-gradient step
@@ -86,16 +87,17 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
       #make the sess.run call to perform one metatraining iteration
       feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
       result = sess.run(input_tensors, feed_dict)
-
+      #IPython.embed()
       #############################
       ## logging and saving
       #############################
-
+      #print(result)
       if gradient_step % log_config['summary_itr'] == 0:
           prelosses.append(result[-2])
           if log_config['log']:
               train_writer.add_summary(result[1], gradient_step) ###is this a typo? should it be result[0]?
           postlosses.append(result[-1])
+          #IPython.embed()
 
       if gradient_step % log_config['print_itr'] == 0:
           print_str = 'Gradient step ' + str(gradient_step)
@@ -106,8 +108,49 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
           prelosses, postlosses = [], []
       gradient_step += 1
 
+    ####### Training loss #########
+    feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
+    train_loss = sess.run(model.total_losses2[train_config['num_updates'] - 1], feed_dict)
+    traininglosses.append(train_loss)
+
+    ####### Validation loss ########
+    ################################
+
+    # Want to keep ts constant across rollouts
+    inputa = inputs_full_val[:, :, :update_bs]
+    inputb = inputs_full_val[:, :, update_bs:2*update_bs]
+    labela = outputs_full_val[:, :, :update_bs]
+    labelb = outputs_full_val[:, :, update_bs:2*update_bs]
+
+    inputa = np.concatenate([inputa[i] for i in range(len(inputa))])
+    inputb = np.concatenate([inputb[i] for i in range(len(inputb))])
+    labela = np.concatenate([labela[i] for i in range(len(labela))])
+    labelb = np.concatenate([labelb[i] for i in range(len(labelb))])
+
+    #IPython.embed()
+
+    feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
+    val_loss = sess.run(model.total_losses2[train_config['num_updates'] - 1], feed_dict)
+    vallosses.append(val_loss)
+
+    
+
   #save dynamics model
   name = 'model' + str(curr_agg_iter)
   print('Saving model at: ', osp.join(path, name))
   #IPython.embed()
   saver.save(sess,  osp.join(path, name))
+
+  # Make validation plot
+  x = np.arange(0, config['sampler']['max_epochs'])
+
+  IPython.embed()
+  plt.plot(x, traininglosses, color ='r', label="Training")
+  plt.plot(x, vallosses, color='g', label="Validation, random")
+  # plt.plot(x, v_mpc_loss_list, color='b', label="Validation, MPC")
+  # plt.plot(x, v_rand_xy_loss_list, color='g', linestyle="--", label="Validation, random, xy")
+  # plt.plot(x, v_mpc_xy_loss_list, color='b', linestyle="--", label="Validation, MPC, xy")
+  plt.legend(loc="upper right", prop = {"size":6})
+  plt.title("MPE")
+  plt.savefig(osp.join(path, name) + "_mpe_graph.png")
+  plt.show()
