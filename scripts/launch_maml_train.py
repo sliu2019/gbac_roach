@@ -225,7 +225,9 @@ def run(d):
     ###########################################################
 
     #create controller node
-    controller_node = GBAC_Controller(policy=policy, state_representation=state_representation, use_pid_mode=use_pid_mode, default_addrs=default_addrs, **config['roach'])
+    controller_node = GBAC_Controller(policy=policy, model=model,
+                                    state_representation=state_representation, use_pid_mode=use_pid_mode, 
+                                    default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], **config['roach'])
 
     #do 1 rollout
     print("\n\n\nPAUSING... right before a controller run... RESET THE ROBOT TO A GOOD LOCATION BEFORE CONTINUING...")

@@ -213,6 +213,18 @@ def create_onehot(curr_surface, use_camera = False, mappings= None):
 
     return curr_onehot
 
+def create_nn_input_using_staterep(state, state_representation, multiple=False):
+  if(state_representation=='all'):
+    return state
+  elif(state_representation=='exclude_x_y'):
+    if(multiple):
+      return state[:,2:]
+    return state[2:]
+  else:
+    print("\n\nHAVEN'T IMPLEMENTED THIS STATE_REPRESENTATION OPTION YET")
+    import IPython
+    IPython.embed()
+
 def singlestep_to_state(robot_info, mocap_info, old_time, old_pos, old_al, old_ar, state_representation):
 
 	#dt

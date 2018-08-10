@@ -20,18 +20,22 @@ from visualization_msgs.msg import MarkerArray
 from geometry_msgs.msg import PoseStamped
 from std_msgs.msg import Float32MultiArray
 from roach_utils import *
+from utils import *
 
 
 class GBAC_Controller(object):
     def __init__(
             self,
             policy,
+            model,
             use_pid_mode=True,
             state_representation='all',
             frequency_value= 10,
             serial_port= '/dev/ttyUSB0',
             baud_rate= 57600,
-            default_addrs= None,#anything after this is unused by this code
+            default_addrs= None,
+            update_batch_size= 0,
+            #anything after this is unused by this code
             x_index= 0,
             y_index= 1,
             yaw_cos_index= 10,
@@ -39,12 +43,14 @@ class GBAC_Controller(object):
             visualize_rviz= True,
     ):
         self.policy = policy
+        self.model = model
         self.state_representation = state_representation
         self.use_pid_mode = use_pid_mode
         self.frequency_value = frequency_value
         self.serial_port = serial_port
         self.baud_rate = baud_rate
         self.default_addrs = default_addrs
+        self.update_batch_size = update_batch_size
 
         self.lock = Condition()
         self.mocap_info = PoseStamped()
@@ -70,8 +76,8 @@ class GBAC_Controller(object):
 
         #make publishers
         self.publish_robotinfo= rospy.Publisher('/robot0/robotinfo', velroach_msg, queue_size=5)
-        self.publish_markers= self.policy.publish_markers = rospy.Publisher('visualize_selected', MarkerArray, queue_size=5)
-        self.publish_markers_desired= self.policy.publish_markers_desired = rospy.Publisher('visualize_desired', MarkerArray, queue_size=5)
+        self.policy.publish_markers = rospy.Publisher('visualize_selected', MarkerArray, queue_size=5)
+        self.policy.publish_markers_desired = rospy.Publisher('visualize_desired', MarkerArray, queue_size=5)
 
     def callback_mocap(self,data):
         self.mocap_info = data
@@ -82,6 +88,9 @@ class GBAC_Controller(object):
         #stop_and_exit_roach_special(self.xb, self.lock, self.robots, self.use_pid_mode)
 
     def run(self,num_steps_for_rollout,desired_shape_for_rollout):
+
+        #save theta*
+        thetaStar = self.model.regressor.get_params()
 
         #lists for return vals
         self.traj_taken=[]
@@ -177,6 +186,15 @@ class GBAC_Controller(object):
             full_curr_state, _, _, _, _ = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, "all")
             abbrev_curr_state, old_time, old_pos, old_al, old_ar = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, self.state_representation)
 
+            ########################
+            ##### DESIRED TRAJ #####
+            ########################
+
+            if(step==0):
+                print("starting x position: ", full_curr_state[self.x_index])
+                print("starting y position: ", full_curr_state[self.y_index])
+                self.policy.desired_states = make_trajectory(desired_shape_for_rollout, np.copy(full_curr_state), self.x_index, self.y_index)
+
             #########################
             ## CHECK STOPPING COND ##
             #########################
@@ -191,7 +209,7 @@ class GBAC_Controller(object):
                 #return stuff to save
                 old_saving_format_dict={
                 'actions_taken': self.actions_taken,
-                'desired_states': self.desired_states,
+                'desired_states': self.policy.desired_states,
                 'traj_taken': self.traj_taken,
                 'save_perp_dist': self.save_perp_dist,
                 'save_forward_dist': self.save_forward_dist,
@@ -201,27 +219,61 @@ class GBAC_Controller(object):
                 'save_curr_heading': self.save_curr_heading,
                 }
 
-                return(self.traj_taken, self.actions_taken, self.desired_states, list_robot_info, list_mocap_info, old_saving_format_dict)
+                return(self.traj_taken, self.actions_taken, self.policy.desired_states, list_robot_info, list_mocap_info, old_saving_format_dict)
+
+            ########################
+            ### UPDATE REGRESSOR ###
+            ########################
+
+            #get the past K points (s,a,ds)
+            length= len(self.traj_taken)
+            K = update_batch_size
+            if(length>K):
+                i= length-1-K
+                while(i<(length-1)):
+                    list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
+                    list_of_a.append(self.actions_taken[i])
+                    list_of_ds.append(create_nn_input_using_staterep(self.traj_taken[i+1]-self.traj_taken[i], self.state_representation))
+                    i+=1
+
+            #to do: 
+                #check self.traj_taken[i] above, and see if it needs to be (1,?) or just (?,) -- decides multiple=True or not (default)
+                    #if multiple, remove this option altogether cuz then always multiple
+                #make the lists from above into arrays
+                #check the below shapes/sizes
+                #make sure the gradient step happens
+                #speed this section up by doing fewer conversions/list-making
+
+            #organize the points into what the regressor wants
+            print("\n\nINSIDE CONTROLLER.... preparing to take a gradient step... TO DO: debug this.") 
+            import IPython
+            IPython.embed()
+            k_labels = (list_of_ds).reshape(1, K, -1)
+            k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
+            feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
+
+            #reset weights of regressor to theta*
+            self.model.regressor.set_params(thetaStar)
+
+            #take gradient step on theta* using the past K points
+            self.sess.run([self.model.test_op], feed_dict=feed_dict)
 
             ########################
             #### COMPUTE ACTION ####
             ########################
 
-            if(step==0):
-                #create desired trajectory
-                print("starting x position: ", full_curr_state[self.x_index])
-                print("starting y position: ", full_curr_state[self.y_index])
-                self.desired_states = self.policy.desired_states = make_trajectory(desired_shape_for_rollout, np.copy(full_curr_state), self.x_index, self.y_index)
-
-
-            #save traj taken
-            self.traj_taken.append(full_curr_state)
-
             #get the best action
             optimal_action, curr_line_segment, old_curr_forward, info_for_saving = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward)            
 
-            #append vars for later saving
+            ########################
+            ######## SAVING ########
+            ########################
+
+            #save (s,a) from robot execution (use next state in list as s')
+            self.traj_taken.append(full_curr_state)
             self.actions_taken.append(optimal_action)
+
+            #append vars for later saving
             self.save_perp_dist.append(info_for_saving['save_perp_dist'])
             self.save_forward_dist.append(info_for_saving['save_forward_dist'])
             self.saved_old_forward_dist.append(info_for_saving['saved_old_forward_dist'])
