@@ -35,9 +35,9 @@ def whichFiles(itr, experiment_type):
   if(experiment_type=='terrain_types'):
 
     #task_list=['turf', 'carpet', 'styrofoam', 'gravel'] #################### this decides what to read in
-    task_list=['turf']
+    task_list=['carpet']
     months = ['all']
-    max_runs_per_surface = 30 ###############################################################
+    max_runs_per_surface = 400 ###############################################################
     path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
     runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
     num_training_rollouts=0
@@ -48,7 +48,7 @@ def whichFiles(itr, experiment_type):
       month = lst[2]
       day = lst[3]
 
-      if(day in ['23','24']):
+      if(day in ['91']): #'23', '24'
         junk=1
       else:
         if (surface in task_list or ("all" in task_list and surface!="joystick")) and ((month in months) or ("all" in months)):
@@ -81,6 +81,7 @@ def whichFiles(itr, experiment_type):
   list_of_pathLists = []
   for surf in task_list:
     list_of_pathLists.append(path_lsts[surf]) #looks sorted...
+  #IPython.embed()
   return list_of_pathLists, num_training_rollouts
 
 #each output of this should be

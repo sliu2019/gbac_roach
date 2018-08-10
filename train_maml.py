@@ -39,7 +39,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
 
     print("\n\n************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
-    while(gradient_step*update_bs < total_points_per_task):
+    while(gradient_step*update_bs*meta_bs < total_points_per_task):
 
       ####################################################
       ## randomly select batch of data, for 1 outer-gradient step
@@ -109,5 +109,5 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config):
   #save dynamics model
   name = 'model' + str(curr_agg_iter)
   print('Saving model at: ', osp.join(path, name))
-  IPython.embed()
+  #IPython.embed()
   saver.save(sess,  osp.join(path, name))

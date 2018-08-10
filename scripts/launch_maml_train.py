@@ -42,10 +42,11 @@ from rllab.misc.instrument import VariantGenerator
 def run(d):
 
     #restore old dynamics model
-    old_exp_name = 'MAML_roach/terrain_types__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
-    old_model_num = 0
-    previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
-    previous_dynamics_model = None
+    train_now = False
+    #old_exp_name = 'MAML_roach/terrain_types__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
+    #old_model_num = 0
+    #previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
+    previous_dynamics_model = "/home/anagabandi/roach_workspace/src/gbac_roach/scripts/MAML_roach/model0"
 
     num_steps_per_rollout=10
     desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
@@ -53,8 +54,6 @@ def run(d):
     rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
     #settings
-    train_now = False
-    model_path = ""
     cheaty_training = False
     use_one_hot = False #True
     use_camera = False #True
@@ -209,16 +208,14 @@ def run(d):
     ## TRAIN THE DYNAMICS MODEL
     ###########################################################
 
-    #restore model
-    if(previous_dynamics_model is None):
-        junk=1
-    else:
+    #train on the given full dataset, for max_epochs
+    if train_now:
+       train(inputs, outputs, curr_agg_iter, model, saver, sess, config)
+    else: 
         print("\n\nRESTORING PREVIOUS DYNAMICS MODEL FROM ", previous_dynamics_model)
         saver.restore(sess, previous_dynamics_model)
 
-    #train on the given full dataset, for max_epochs
-    train(inputs, outputs, curr_agg_iter, model, saver, sess, config)
-
+    #IPython.embed()
     predicted_traj = regressor.do_forward_sim(dataX_full[0][7][27:45], dataY[0][7][27:45], state_representation)
     #np.save(save_dir + '/forwardsim_true.npy', dataX_full[0][7][27:45])
     #np.save(save_dir + '/forwardsim_pred.npy', predicted_traj)
@@ -273,10 +270,10 @@ def main(config_path, extra_config):
     vg = VariantGenerator()
     vg.add('config', [config])
     ##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-    vg.add('meta_batch_size', [40]) ##################
+    vg.add('meta_batch_size', [50]) ##################
     vg.add('update_batch_size', [20]) ############# 8 
     vg.add('update_lr', [0.001])
-    vg.add('max_epochs', [1]) ###########################
+    vg.add('max_epochs', [80]) ###########################
     vg.add('horizon', [5])
     vg.add('curr_agg_iter', [0])
 
