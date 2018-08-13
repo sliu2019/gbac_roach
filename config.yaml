@@ -13,8 +13,9 @@ training:
     meta_loss: False                     # If True, learns the loss in the inner-update
     stop_grad: False                     # If True, do not use second derivatices in the inner-update
     multistep_loss: False
-    steps: 1
+    steps: 0.001
     training_ratio: 0.9                  # Training/validation split
+    regularization_weight: 0.0005         # Weight on regularization term in loss function
 
 roach:
     frequency_value: 10
@@ -63,9 +64,9 @@ policy:
     n_candidates: 1000                   # Number of candidates actions when performing MPC
     horizon: 5                          # Horizon of the planning in the MPC
     test_regressor: False
-    horiz_penalty_factor: 40
+    horiz_penalty_factor: 30
     backward_discouragement: 10
-    heading_penalty_factor: 30
+    heading_penalty_factor: 5
 
 testing:
     animated: False                       # If True, renders the test rollouts

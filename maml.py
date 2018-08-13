@@ -2,6 +2,7 @@
 import numpy as np
 import tensorflow as tf
 from sandbox.ignasi.maml.utils import mse
+import IPython
 
 
 class MAML:
@@ -164,9 +165,19 @@ class MAML:
 
         # [avg loss(f_weights{1}(inputb)), avg loss(f_weights{2}(inputb)), ...]
             #this is the L of f(theta') on validation set, which is used by the (metatrain_op)
-        self.total_losses2 = total_losses2 = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
 
-####################################################################################################################################################################
+        #############################################################################
+        ###### YOU WILL NEED TO CHANGE THIS REGULARIZER WHEN NUM_UPDATES > 1 ########
+        #############################################################################
+        # The reg term needs to be specific to each num_update 
+        self.regularization_weight = self.config['regularization_weight']
+        self.trainable_vars = tf.trainable_variables()
+        self.regularizer = self.regularization_weight*tf.add_n([tf.nn.l2_loss(v) for v in self.trainable_vars if ('bias' not in v.name and 'b' not in v.name)])
+        #self.total_losses2 = [tf.reduce_mean(lossesb[j] + self.regularizer) for j in range(num_updates)]
+        self.mse_loss = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
+
+        self.total_losses2 = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
+        #IPython.embed()
 
         #########################################
         ## Define pretrain_op
@@ -219,6 +230,6 @@ class MAML:
         tf.summary.scalar(prefix+'Pre-update loss', total_loss1)
 
         for j in range(num_updates):
-            tf.summary.scalar(prefix+'Post-update loss, step ' + str(j+1), total_losses2[j])
+            tf.summary.scalar(prefix+'Post-update loss, step ' + str(j+1), self.total_losses2[j])
 
 

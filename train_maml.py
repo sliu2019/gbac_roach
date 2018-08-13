@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.random as npr
 import tensorflow as tf
 import random
 import pickle
@@ -26,7 +27,17 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   prelosses, postlosses,vallosses, traininglosses = [], [], [], []
   multitask_weights, reg_weights = [], []
   total_points_per_task = len(inputs_full[0])*len(inputs_full[0][0]) #numRollouts * pointsPerRollout
+  
+  all_indices = []
+  for taski in range(len(inputs_full)):
+    for rollouti in range(len(inputs_full[taski])):
+      all_rollout_indices = [(taski, rollouti, x) for x in range(len(inputs_full[taski][rollouti]) - update_bs*2 + 1)]
+      all_indices.extend(all_rollout_indices)
 
+  all_indices = np.array(all_indices)
+  random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
+  #IPython.embed() # check all_indices, rand_indices shape, look inside inputs_full to see if neglected tasks occupy empty space
+  
   #writer for log
   path = logger.get_snapshot_dir() 
   if log_config['log']:
@@ -40,30 +51,18 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
 
     print("\n\n************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
-    while(gradient_step*update_bs < total_points_per_task):
+    while((gradient_step*meta_bs) < len(all_indices)): # I feel like this should be different....
 
       ####################################################
       ## randomly select batch of data, for 1 outer-gradient step
       ####################################################
-
-      #full data is (many tasks, rollouts from that task, each rollout has acs/obs/etc.)
-      #batch data should be (metaBS, 2K, dim)
-
-      idxs_task=[]
-      idxs_path=[]
-      idxs_ts=[]
-      for task_num in range(meta_bs):
-        #which task
-        which_task = np.random.randint(0,  len(inputs_full))
-        idxs_task.append(which_task)
-        #which rollout, from that task
-        which_path = np.random.randint(0, len(inputs_full[which_task]))
-        idxs_path.append(which_path)
-        #which 2k consective datapoints, from that rollout
-        i = np.random.randint(2*update_bs, len(inputs_full[which_task][which_path]))
-        idxs_ts.append(np.arange(i - 2*update_bs, i))
-      outputs_batch = np.array([outputs_full[task][path_num][ts] for task, path_num, ts in zip(idxs_task, idxs_path, idxs_ts)])
-      inputs_batch = np.array([inputs_full[task][path_num][ts] for task, path_num, ts in zip(idxs_task, idxs_path, idxs_ts)])
+      
+      random_indices_batch = random_indices[gradient_step*meta_bs: min((gradient_step+1)*meta_bs, len(random_indices)-1)]
+      #IPython.embed()
+      indices_batch = all_indices[random_indices_batch]
+      
+      inputs_batch = np.array([inputs_full[i[0]][i[1]][i[2]:i[2] + 2*update_bs] for i in indices_batch])
+      outputs_batch = np.array([outputs_full[i[0]][i[1]][i[2]:i[2] + 2*update_bs] for i in indices_batch])
 
       #use the 1st half as training data for inner-loop gradient
       inputa = inputs_batch[:, :update_bs, :]
@@ -109,8 +108,10 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       gradient_step += 1
 
     ####### Training loss #########
+    ################################
+
     feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
-    train_loss = sess.run(model.total_losses2[train_config['num_updates'] - 1], feed_dict)
+    train_loss = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)
     traininglosses.append(train_loss)
 
     ####### Validation loss ########
@@ -130,21 +131,24 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     #IPython.embed()
 
     feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
-    val_loss = sess.run(model.total_losses2[train_config['num_updates'] - 1], feed_dict)
+    val_loss = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)
     vallosses.append(val_loss)
 
-    
+    ###### Saving epochs #####
+    if training_epoch % 5 == 0:
+      name = "model_epoch" + str(training_epoch)
+      saver.save(sess,  osp.join(path, name))
 
   #save dynamics model
-  name = 'model' + str(curr_agg_iter)
-  print('Saving model at: ', osp.join(path, name))
-  #IPython.embed()
-  saver.save(sess,  osp.join(path, name))
+  # name = 'model' + str(curr_agg_iter)
+  # print('Saving model at: ', osp.join(path, name))
+  # #IPython.embed()
+  # saver.save(sess,  osp.join(path, name))
 
   # Make validation plot
   x = np.arange(0, config['sampler']['max_epochs'])
 
-  IPython.embed()
+  #IPython.embed()
   plt.plot(x, traininglosses, color ='r', label="Training")
   plt.plot(x, vallosses, color='g', label="Validation, random")
   # plt.plot(x, v_mpc_loss_list, color='b', label="Validation, MPC")
@@ -152,5 +156,5 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   # plt.plot(x, v_mpc_xy_loss_list, color='b', linestyle="--", label="Validation, MPC, xy")
   plt.legend(loc="upper right", prop = {"size":6})
   plt.title("MPE")
-  plt.savefig(osp.join(path, name) + "_mpe_graph.png")
+  plt.savefig(path + "/mpe_graph.png")
   plt.show()

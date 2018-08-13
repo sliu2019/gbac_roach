@@ -37,7 +37,7 @@ def whichFiles(itr, experiment_type):
     #task_list=['turf', 'carpet', 'styrofoam', 'gravel'] #################### this decides what to read in
     task_list=['turf', 'carpet']
     months = ['all']
-    max_runs_per_surface = 10 ###############################################################
+    max_runs_per_surface = 20 #396 ###############################################################
     path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
     runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
     num_training_rollouts=0

@@ -44,13 +44,13 @@ def run(d):
     #restore old dynamics model
     train_now = True
     restore_previous = False
-    old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
-    old_model_num = 0
-    previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
-    #previous_dynamics_model = "/home/anagabandi/roach_workspace/src/gbac_roach/scripts/MAML_roach/model0"
+    # old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
+    # old_model_num = 0
+    # previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
+    previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types_all_terrain_mbs_64_ubs_16/model_epoch10"
 
     num_steps_per_rollout= 145
-    desired_shape_for_rollout = "right"                     #straight, left, right, circle_left, zigzag, figure8
+    desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
     save_rollout_run_num = 0
     rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
@@ -169,6 +169,7 @@ def run(d):
     outputs = copy.deepcopy(dataZ)
     inputs = copy.deepcopy(dataX)
 
+    #IPython.embed()
     inputs_val = np.append(np.array(dataX_val), np.array(dataY_val), axis = 3)
     outputs_val = np.array(dataZ_val)
     #IPython.embed() # check shapes
@@ -238,6 +239,7 @@ def run(d):
         if(restore_previous):
             print("\n\nRESTORING PREVIOUS DYNAMICS MODEL FROM ", previous_dynamics_model, " AND CONTINUING TRAINING...\n\n")
             saver.restore(sess, previous_dynamics_model)
+        #IPython.embed()
         train(inputs, outputs, curr_agg_iter, model, saver, sess, config, inputs_val, outputs_val)
     else: 
         print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
@@ -305,10 +307,11 @@ def main(config_path, extra_config):
     vg = VariantGenerator()
     vg.add('config', [config])
     ##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-    vg.add('meta_batch_size', [50]) ##################
+    vg.add('meta_batch_size', [64]) ##################
     vg.add('update_batch_size', [16]) ############# 8 
-    vg.add('update_lr', [0.001])
-    vg.add('max_epochs', [2]) ########################### 3 was fine-ish on carpet
+    #vg.add('update_lr', [0.001])
+    vg.add('meta_lr', [0.001])
+    vg.add('max_epochs', [30]) ########################### 3 was fine-ish on carpet
     vg.add('horizon', [5])
     vg.add('curr_agg_iter', [0])
 
@@ -326,7 +329,7 @@ def main(config_path, extra_config):
 
 
         #v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + '__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
-        v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_turf_model_on_turf"
+        v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_all_terrain_mbs_" + str(v['config']['training']['meta_batch_size']) + "_ubs_" + str(v['config']['training']['update_batch_size']) 
 
         run_experiment_lite(
             run,
