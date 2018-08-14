@@ -8,6 +8,7 @@ import matplotlib
 from rllab.envs.env_spec import EnvSpec
 from rllab.spaces.box import Box
 import IPython
+import time
 
 #roach stuff
 from nn_dynamics_roach.msg import velroach_msg
@@ -139,7 +140,12 @@ class GBAC_Controller(object):
 
             got_data=False
             start_time = time.time()
+
+            if step == 0:
+                big_loop_start = time.time()
             while(got_data==False):
+                #print("DT: ", time.time() - big_loop_start)
+                #big_loop_start = time.time()
                 if (time.time() - start_time)%5 == 0:
                     print("Controller is waiting to receive data from robot")
                 if (time.time() - start_time) > 10:
@@ -227,36 +233,36 @@ class GBAC_Controller(object):
             ### UPDATE REGRESSOR ###
             ########################
 
-            #get the past K points (s,a,ds)
-            length= len(self.traj_taken)
-            K = self.update_batch_size
-            if(length>K):
-                i= length-1-K
-                list_of_s=[]
-                list_of_a=[]
-                list_of_ds=[]
-                while(i<(length-1)):
-                    list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
-                    list_of_a.append(self.actions_taken[i])
-                    list_of_ds.append(self.traj_taken[i+1]-self.traj_taken[i])
-                    i+=1
-                list_of_s= np.array(list_of_s)
-                list_of_a= np.array(list_of_a)
-                list_of_ds= np.array(list_of_ds)
+            # #get the past K points (s,a,ds)
+            # length= len(self.traj_taken)
+            # K = self.update_batch_size
+            # if(length>K):
+            #     i= length-1-K
+            #     list_of_s=[]
+            #     list_of_a=[]
+            #     list_of_ds=[]
+            #     while(i<(length-1)):
+            #         list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
+            #         list_of_a.append(self.actions_taken[i])
+            #         list_of_ds.append(self.traj_taken[i+1]-self.traj_taken[i])
+            #         i+=1
+            #     list_of_s= np.array(list_of_s)
+            #     list_of_a= np.array(list_of_a)
+            #     list_of_ds= np.array(list_of_ds)
 
-                #to do: speed this section up by doing fewer conversions/list-making
+            #     #to do: speed this section up by doing fewer conversions/list-making
 
-                #organize the points into what the regressor wants
-                k_labels = (list_of_ds).reshape(1, K, -1)
-                k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
-                feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
+            #     #organize the points into what the regressor wants
+            #     k_labels = (list_of_ds).reshape(1, K, -1)
+            #     k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
+            #     feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
 
-                #reset weights of regressor to theta*
-                self.model.regressor.set_params(thetaStar)
-                print("....done resetting to theta*")
+            #     #reset weights of regressor to theta*
+            #     self.model.regressor.set_params(thetaStar)
+            #     print("....done resetting to theta*")
 
-                #take gradient step on theta* using the past K points
-                self.sess.run([self.model.test_op], feed_dict=feed_dict)
+            #     #take gradient step on theta* using the past K points
+            #     self.sess.run([self.model.test_op], feed_dict=feed_dict)
 
             ########################
             #### COMPUTE ACTION ####

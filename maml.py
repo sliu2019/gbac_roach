@@ -170,13 +170,17 @@ class MAML:
         ###### YOU WILL NEED TO CHANGE THIS REGULARIZER WHEN NUM_UPDATES > 1 ########
         #############################################################################
         # The reg term needs to be specific to each num_update 
-        self.regularization_weight = self.config['regularization_weight']
-        self.trainable_vars = tf.trainable_variables()
-        self.regularizer = self.regularization_weight*tf.add_n([tf.nn.l2_loss(v) for v in self.trainable_vars if ('bias' not in v.name and 'b' not in v.name)])
-        #self.total_losses2 = [tf.reduce_mean(lossesb[j] + self.regularizer) for j in range(num_updates)]
-        self.mse_loss = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
 
-        self.total_losses2 = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
+        if self.config['use_reg']:
+            self.regularization_weight = self.config['regularization_weight']
+            self.trainable_vars = tf.trainable_variables()
+            self.regularizer = self.regularization_weight*tf.add_n([tf.nn.l2_loss(v) for v in self.trainable_vars if ('bias' not in v.name and 'b' not in v.name)])
+            self.total_losses2 = [tf.reduce_mean(lossesb[j] + self.regularizer) for j in range(num_updates)]
+        else: 
+            self.total_losses2 = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
+
+        
+        self.mse_loss = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
         #IPython.embed()
 
         #########################################

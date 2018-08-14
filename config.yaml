@@ -15,11 +15,12 @@ training:
     multistep_loss: False
     steps: 0.001
     training_ratio: 0.9                  # Training/validation split
-    regularization_weight: 0.0005         # Weight on regularization term in loss function
+    use_reg: False                       # If True, regularize the outer loss function
+    regularization_weight: 0.0005        # Weight on regularization term in loss function
 
 roach:
     frequency_value: 10
-    serial_port: '/dev/ttyUSB0'
+    serial_port: '/dev/ttyUSB1'
     baud_rate: 57600
     visualize_rviz: True
     x_index: 0
@@ -61,12 +62,12 @@ logging:
     resume_dir: ''
 
 policy:
-    n_candidates: 1000                   # Number of candidates actions when performing MPC
+    n_candidates: 2000                   # Number of candidates actions when performing MPC
     horizon: 5                          # Horizon of the planning in the MPC
     test_regressor: False
-    horiz_penalty_factor: 30
+    horiz_penalty_factor: 40
     backward_discouragement: 10
-    heading_penalty_factor: 5
+    heading_penalty_factor: 20
 
 testing:
     animated: False                       # If True, renders the test rollouts

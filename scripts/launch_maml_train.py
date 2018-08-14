@@ -42,16 +42,16 @@ from rllab.misc.instrument import VariantGenerator
 def run(d):
 
     #restore old dynamics model
-    train_now = True
-    restore_previous = False
+    train_now = False
+    restore_previous = True
     # old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
     # old_model_num = 0
     # previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
-    previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types_all_terrain_mbs_64_ubs_16/model_epoch10"
+    previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types_all_terrain_mbs_1300_ubs_16/model_epoch10"
 
     num_steps_per_rollout= 145
-    desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
-    save_rollout_run_num = 0
+    desired_shape_for_rollout = "right"                     #straight, left, right, circle_left, zigzag, figure8
+    save_rollout_run_num = 12
     rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
     #settings
@@ -244,9 +244,9 @@ def run(d):
     else: 
         print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
         saver.restore(sess, previous_dynamics_model)
-    return
+    #return
     #IPython.embed()
-    predicted_traj = regressor.do_forward_sim(dataX_full[0][7][27:45], dataY[0][7][27:45], state_representation)
+    predicted_traj = regressor.do_forward_sim(dataX_full[0][0][27:45], dataY[0][0][27:45], state_representation)
     #np.save(save_dir + '/forwardsim_true.npy', dataX_full[0][7][27:45])
     #np.save(save_dir + '/forwardsim_pred.npy', predicted_traj)
 
@@ -307,15 +307,17 @@ def main(config_path, extra_config):
     vg = VariantGenerator()
     vg.add('config', [config])
     ##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-    vg.add('meta_batch_size', [64]) ##################
+    vg.add('meta_batch_size', [1300]) #1300 #################
     vg.add('update_batch_size', [16]) ############# 8 
     #vg.add('update_lr', [0.001])
     vg.add('meta_lr', [0.001])
-    vg.add('max_epochs', [30]) ########################### 3 was fine-ish on carpet
+    vg.add('max_epochs', [25]) ########################### 3 was fine-ish on carpet
     vg.add('horizon', [5])
     vg.add('curr_agg_iter', [0])
+    if config['training']['use_reg']:
+        vg.add('regularization_weight', [0.01, 0.001, 0.0001])
 
-
+    #IPython.embed()
     ##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
 
     for v in vg.variants():
@@ -324,12 +326,17 @@ def main(config_path, extra_config):
 
         _v = v.copy(); del _v['config'], _v['_hidden_keys']
         v['config'] = replace_in_dict(v['config'], _v)
+
+        # IPython.embed()
         #v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + '__'.join(
         #    [v['config']['experiment_type']] + [k + '_' + str(v) for k,v in _v.items() if k not in ['name', 'experiment_type', 'dim_hidden']])
 
 
         #v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + '__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
-        v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_all_terrain_mbs_" + str(v['config']['training']['meta_batch_size']) + "_ubs_" + str(v['config']['training']['update_batch_size']) 
+        v['exp_name'] = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_all_terrain_mbs_" + str(v['config']['training']['meta_batch_size']) + "_ubs_" + str(v['config']['training']['update_batch_size'])
+        if v['config']['training']['use_reg']:
+            v['exp_name'] = v['exp_name'] + "_reg_" + str(v['config']['training']['regularization_weight'])
+        #v['exp_name'] = "MAML_roach/terrain_types_all_terrain_mbs_1300_ubs_16_exclude_turf"
 
         run_experiment_lite(
             run,
@@ -339,7 +346,7 @@ def main(config_path, extra_config):
             snapshot_mode="all",
             mode="local",
             use_cloudpickle=True,
-            exp_name=exp_name,
+            exp_name=v['exp_name'],
             use_gpu=False,
             pre_commands=[#"yes | pip install --upgrade pip",
                           "yes | pip install tensorflow=='1.4.1'",

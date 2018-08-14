@@ -35,7 +35,6 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       all_indices.extend(all_rollout_indices)
 
   all_indices = np.array(all_indices)
-  random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
   #IPython.embed() # check all_indices, rand_indices shape, look inside inputs_full to see if neglected tasks occupy empty space
   
   #writer for log
@@ -48,6 +47,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
 
   #do metatraining
   for training_epoch in range(config['sampler']['max_epochs']):
+    random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
 
     print("\n\n************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
@@ -56,7 +56,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       ####################################################
       ## randomly select batch of data, for 1 outer-gradient step
       ####################################################
-      
+
       random_indices_batch = random_indices[gradient_step*meta_bs: min((gradient_step+1)*meta_bs, len(random_indices)-1)]
       #IPython.embed()
       indices_batch = all_indices[random_indices_batch]

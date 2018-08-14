@@ -35,9 +35,9 @@ def whichFiles(itr, experiment_type):
   if(experiment_type=='terrain_types'):
 
     #task_list=['turf', 'carpet', 'styrofoam', 'gravel'] #################### this decides what to read in
-    task_list=['turf', 'carpet']
+    task_list=['carpet', 'gravel', 'styrofoam']
     months = ['all']
-    max_runs_per_surface = 20 #396 ###############################################################
+    max_runs_per_surface = 5 #250 #396 ###############################################################
     path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
     runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
     num_training_rollouts=0
@@ -80,7 +80,7 @@ def whichFiles(itr, experiment_type):
 
   list_of_pathLists = []
 
-  for k, v in path_lsts.iteritems():
+  for k, v in path_lsts.items():
     if len(v):
       list_of_pathLists.append(v)
 

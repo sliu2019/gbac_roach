@@ -401,9 +401,9 @@ class NaiveMPCController(Policy, Serializable):
                 marker.header.frame_id = "/world"
                 marker.type = marker.SPHERE
                 marker.action = marker.ADD
-                marker.scale.x = 0.02
-                marker.scale.y = 0.02
-                marker.scale.z = 0.02
+                marker.scale.x = 0.1
+                marker.scale.y = 0.1
+                marker.scale.z = 0.1
                 marker.color.a = 1.0
                 marker.color.r = 1.0
                 marker.color.g = 0.0
