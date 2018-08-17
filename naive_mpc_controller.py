@@ -369,7 +369,7 @@ class NaiveMPCController(Policy, Serializable):
             #publish the desired traj
             markerArray2 = MarkerArray()
             marker_id=0
-            for des_pt_num in range(5): #5 for all, 8 for circle, 4 for zigzag
+            for des_pt_num in range(desired_states.shape[0]): #5 for all, 8 for circle, 4 for zigzag
                 marker = Marker()
                 marker.id=marker_id
                 marker.header.frame_id = "/world"

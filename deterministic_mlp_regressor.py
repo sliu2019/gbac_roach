@@ -6,7 +6,7 @@ from utils import *
 
 class DeterministicMLPRegressor(object):
     def __init__(self, dim_input, dim_output, dim_hidden=(64, 64), dim_conv1d=(8, 8, 8), norm='None', dim_obs=None,
-                 dim_bias=0, multi_input=0, tf_datatype=tf.float32):
+                 dim_bias=0, multi_input=0, tf_datatype=tf.float32, seed=None):
 
         # dims
         self.multi_input = multi_input
@@ -23,7 +23,9 @@ class DeterministicMLPRegressor(object):
         # initializers
         self.weight_initializer = tf.truncated_normal
         self.bias_initializer = tf.zeros
-        self.xavier_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=None, dtype=tf_datatype) ## 
+        self.seed = seed
+        #IPython.embed() # check seed
+        #self.xavier_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype) ## 
         self.mean_initializer = np.zeros
         self.std_initializer = np.ones
         self.is_rnn = False
@@ -49,32 +51,33 @@ class DeterministicMLPRegressor(object):
     def _construct_fc_weights(self, meta_loss):
         weights = dict()
         if self.dim_bias > 0:
-            #weights['bias'] = tf.Variable(self.bias_initializer([self.dim_bias]))
-            weights['bias'] = tf.Variable(self.xavier_initializer([self.dim_bias]), name='bias')
+            weights['bias'] = tf.Variable(self.bias_initializer([self.dim_bias]), name = 'bias')
+            #weights['bias'] = tf.Variable(self.xavier_initializer([self.dim_bias]), name='bias')
 
         # the 1st hidden layer
-        #weights['W0'] = tf.Variable(self.weight_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]], stddev=0.01))
-        #weights['b0'] = tf.Variable(self.bias_initializer([self.dim_hidden[0]]))
-        weights['W0'] = tf.Variable(self.xavier_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]]), name='W0')
-        weights['b0'] = tf.Variable(self.xavier_initializer([self.dim_hidden[0]]), name='b0')
+        weights['W0'] = tf.Variable(self.weight_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]], stddev=0.01, seed=self.seed), name = 'W0')
+        weights['b0'] = tf.Variable(self.bias_initializer([self.dim_hidden[0]]), name = 'b0')
+        #weights['W0'] = tf.Variable(self.xavier_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]]), name='W0')
+        #weights['b0'] = tf.Variable(self.xavier_initializer([self.dim_hidden[0]]), name='b0')
 
         # intermediate hidden layers
         for i in range(1, len(self.dim_hidden)):
-            #weights['W' + str(i)] = tf.Variable(self.weight_initializer([self.dim_hidden[i - 1], self.dim_hidden[i]], stddev=0.01))
-            #weights['b' + str(i)] = tf.Variable(self.bias_initializer([self.dim_hidden[i]]))
-            weights['W' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i - 1], self.dim_hidden[i]]), name='W'+str(i))
-            weights['b' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i]]), name='b'+str(i))
+            weights['W' + str(i)] = tf.Variable(self.weight_initializer([self.dim_hidden[i - 1], self.dim_hidden[i]], stddev=0.01, seed=self.seed), name='W'+str(i))
+            weights['b' + str(i)] = tf.Variable(self.bias_initializer([self.dim_hidden[i]]), name='b'+str(i))
+            #weights['W' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i - 1], self.dim_hidden[i]]), name='W'+str(i))
+            #weights['b' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i]]), name='b'+str(i))
 
-        #weights['W' + str(len(self.dim_hidden))] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output], stddev=0.01))
-        #weights['b' + str(len(self.dim_hidden))] = tf.Variable(self.bias_initializer([self.dim_output]))
-        weights['W' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_hidden[-1], self.dim_output]), name='W' + str(len(self.dim_hidden)))
-        weights['b' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_output]),name='b' + str(len(self.dim_hidden)))
+        weights['W' + str(len(self.dim_hidden))] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output], stddev=0.01, seed=self.seed),  name='W' + str(len(self.dim_hidden)))
+        weights['b' + str(len(self.dim_hidden))] = tf.Variable(self.bias_initializer([self.dim_output]), name='b' + str(len(self.dim_hidden)))
+        #weights['W' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_hidden[-1], self.dim_output]), name='W' + str(len(self.dim_hidden)))
+        #weights['b' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_output]),name='b' + str(len(self.dim_hidden)))
+        
         if meta_loss:
             for i in range(len(self.dim_conv1d)):
-                #weights['W_1d_conv' + str(i)] = tf.Variable(self.weight_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output], stddev=0.01))
-                #weights['b_1d_conv' + str(i)] = tf.Variable(self.bias_initializer([self.dim_output]))
-                weights['W_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output]), name='W_1d_conv' + str(i))
-                weights['b_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_output]), name='b_1d_conv' + str(i))
+                weights['W_1d_conv' + str(i)] = tf.Variable(self.weight_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output], stddev=0.01, seed=self.seed), name='W_1d_conv' + str(i))
+                weights['b_1d_conv' + str(i)] = tf.Variable(self.bias_initializer([self.dim_output]), name='b_1d_conv' + str(i))
+                #weights['W_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output]), name='W_1d_conv' + str(i))
+                #weights['b_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_output]), name='b_1d_conv' + str(i))
         return weights
 
     def forward_fc(self, inp, weights, reuse=False, meta_loss=False):
@@ -93,6 +96,7 @@ class DeterministicMLPRegressor(object):
         out = tf.matmul(hidden, weights['W' + str(len(self.dim_hidden))]) + weights[
             'b' + str(len(self.dim_hidden))]
         if meta_loss:
+            IPython.embed()
             out = tf.reshape(out, [-1, out.get_shape().dims[-2].value, self.dim_output])
             for i in range(len(self.dim_conv1d) - 1):
                 out = normalize(tf.nn.conv1d(out,  weights['W_1d_conv' + str(i)], 1,

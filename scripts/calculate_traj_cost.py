@@ -2,6 +2,7 @@ import IPython
 import numpy as np 
 import matplotlib.pyplot as plt
 from moving_distance import moving_distance
+import yaml
 
 
 def main():
@@ -12,16 +13,18 @@ def main():
 	is_diffDrive = False
 
 	#run_1: gravel model on gravel
-	run_num = 'run_30'
+	#rollouts_path = '/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16/saved_rollouts'
+	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16_NON_GBAC/saved_rollouts"
+	#rollouts_path = "/home/anagabandi/roach_workspace/src/nn_dynamics_roach/run_36"
 	#traj_save_path = ['zigzag0', 'zigzag1', 'zigzag2', 'zigzag3', 'zigzag4']
-	traj_save_path = ['straight0', 'straight1', 'straight2', 'straight3', 'straight4']
+	#traj_save_path = ['left6_aggIter0','left7_aggIter0', 'left8_aggIter0']
+	traj_save_path = ['right0_aggIter0','right1_aggIter0','right2_aggIter0','right3_aggIter0', 'right4_aggIter0', 'right5_aggIter0', 'right6_aggIter0', 'right7_aggIter0','right9_aggIter0']
+	#traj_save_path = ['right3_aggIter0', 'right4_aggIter0', 'right5_aggIter0', 'right6_aggIter0', 'right7_aggIter0']
 	#traj_save_path = ['left0', 'left1', 'left2', 'left3', 'left4']
 	#traj_save_path = ['right0', 'right1', 'right2', 'right3', 'right4']
 
 
-	horiz_penalty_factor= 30
-	backward_discouragement= 10
-	heading_penalty_factor= 5
+	
 
 	################################################################
 	################################################################
@@ -34,19 +37,24 @@ def main():
 
 		#read in traj info
 		if(is_diffDrive):
-			curr_dir = '../' + run_num + '/' + traj_path + '/' + 'diffdrive_'
+			curr_dir = rollouts_path + '/' + traj_path + '/' + 'diffdrive_'
 		else:
-			curr_dir = '../' + run_num + '/' + traj_path + '/'
+			curr_dir = rollouts_path + '/' + traj_path + '/'
+
+		config = yaml.load(open(curr_dir + "saved_config.yaml"))
+		horiz_penalty_factor= config['policy']['horiz_penalty_factor']
+		backward_discouragement= config['policy']['backward_discouragement']
+		heading_penalty_factor= config['policy']['heading_penalty_factor']
 
 		actions_taken = np.load(curr_dir +'actions.npy')
 		desired_states = np.load(curr_dir +'desired.npy')
-		traj_taken = np.load(curr_dir +'executed.npy')
-		save_perp_dist = np.load(curr_dir +'perp.npy')
-		save_forward_dist = np.load(curr_dir +'forward.npy')
-		saved_old_forward_dist = np.load(curr_dir +'oldforward.npy')
-		save_moved_to_next = np.load(curr_dir +'movedtonext.npy')
-		save_desired_heading = np.load(curr_dir +'desheading.npy')
-		save_curr_heading = np.load(curr_dir +'currheading.npy')
+		traj_taken = np.load(curr_dir +'oldFormat_executed.npy')
+		save_perp_dist = np.load(curr_dir +'oldFormat_perp.npy')
+		save_forward_dist = np.load(curr_dir +'oldFormat_forward.npy')
+		saved_old_forward_dist = np.load(curr_dir +'oldFormat_oldforward.npy')
+		save_moved_to_next = np.load(curr_dir +'oldFormat_movedtonext.npy')
+		save_desired_heading = np.load(curr_dir +'oldFormat_desheading.npy')
+		save_curr_heading = np.load(curr_dir +'oldFormat_currheading.npy')
 
 		#calculate cost
 		cost_per_step = []
@@ -82,9 +90,11 @@ def main():
 		list_cost.append(total_cost)
 		list_avg_cost.append(total_cost/length)
 
-		#plt.plot(desired_states[:5,0], desired_states[:5,1], 'ro')
-		#plt.plot(traj_taken[:,0], traj_taken[:,1])
-		#plt.show()
+		plt.plot(desired_states[:,0], desired_states[:,1], 'ro')
+		plt.plot(traj_taken[:,0], traj_taken[:,1])
+		plt.savefig(rollouts_path + "/" + traj_path + "/x_y_visualization.png")
+		plt.show()
+		plt.clf()
 
 	print()
 	print()

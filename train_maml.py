@@ -24,7 +24,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
 
   #init vars
   t0 = time.time()
-  prelosses, postlosses,vallosses, traininglosses = [], [], [], []
+  prelosses, postlosses,vallosses, metatrain_losses_withReg, metatrain_losses = [], [], [], [], []
   multitask_weights, reg_weights = [], []
   total_points_per_task = len(inputs_full[0])*len(inputs_full[0][0]) #numRollouts * pointsPerRollout
   
@@ -46,12 +46,16 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   yaml.dump(config, open(osp.join(path, 'saved_config.yaml'), 'w'))
 
   #do metatraining
+  all_means_ratio=[]
+  all_means_grads=[]
+  all_means_weights=[]
+  which_epochs=[]
   for training_epoch in range(config['sampler']['max_epochs']):
     random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
 
     print("\n\n************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
-    while((gradient_step*meta_bs) < len(all_indices)): # I feel like this should be different....
+    while((gradient_step*meta_bs*update_bs) < total_points_per_task*4): # I feel like this should be different....
 
       ####################################################
       ## randomly select batch of data, for 1 outer-gradient step
@@ -94,7 +98,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       if gradient_step % log_config['summary_itr'] == 0:
           prelosses.append(result[-2])
           if log_config['log']:
-              train_writer.add_summary(result[1], gradient_step) ###is this a typo? should it be result[0]?
+              train_writer.add_summary(result[1], gradient_step)
           postlosses.append(result[-1])
           #IPython.embed()
 
@@ -103,16 +107,95 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
           print_str += '   | Mean pre-losses: ' + str(np.mean(prelosses)) + '   | Mean post-losses: ' + str(np.mean(postlosses))
           print_str += '    | Time spent:   {0:.2f}'.format(time.time() - t0)
           print(print_str)
+          if(train_config['use_reg']):
+            print("Regularization loss: ", sess.run(model.regularizer, feed_dict))
+          print("MSE loss: ", sess.run(model.mse_loss, feed_dict))
+
           t0 = time.time()
           prelosses, postlosses = [], []
+
+      if training_epoch%5==0:
+        if(gradient_step==0):
+          check_outputbs, theta_multiple, update_lr_multiple, gradients_of_theta_multiple, theta_prime_multiple = sess.run([model.check_outputbs, model.theta_multiple, model.update_lr_multiple, model.gradients_of_theta_multiple, model.theta_prime_multiple], feed_dict)
+
+          #theta
+          my_weights=[]
+          for index in range(len(theta_multiple)):
+            my_weights.append(theta_multiple[index][0])
+          #gradients
+          my_gradients=[]
+          for index in range(len(gradients_of_theta_multiple)):
+            my_gradients.append(gradients_of_theta_multiple[index][0])
+          #calculate theta'
+          calculated_theta_prime_one=[]
+          calculated_theta_prime_1=[]
+          calculated_theta_prime_01=[]
+          calculated_theta_prime_001=[]
+          for index in range(len(my_weights)):
+            calculated_theta_prime_one.append(my_weights[index]-1.0*my_gradients[index])
+            calculated_theta_prime_1.append(my_weights[index]-0.1*my_gradients[index])
+            calculated_theta_prime_01.append(my_weights[index]-0.01*my_gradients[index])
+            calculated_theta_prime_001.append(my_weights[index]-0.001*my_gradients[index])
+          #back to dicts for forward func
+          calculated_theta_prime_one={'W0':calculated_theta_prime_one[0], 'W1':calculated_theta_prime_one[1], 'W2':calculated_theta_prime_one[2], 'b0':calculated_theta_prime_one[3], 'b1':calculated_theta_prime_one[4], 'b2':calculated_theta_prime_one[5], 'bias':calculated_theta_prime_one[6]}
+          calculated_theta_prime_1={'W0':calculated_theta_prime_1[0], 'W1':calculated_theta_prime_1[1], 'W2':calculated_theta_prime_1[2], 'b0':calculated_theta_prime_1[3], 'b1':calculated_theta_prime_1[4], 'b2':calculated_theta_prime_1[5], 'bias':calculated_theta_prime_1[6]}
+          calculated_theta_prime_01={'W0':calculated_theta_prime_01[0], 'W1':calculated_theta_prime_01[1], 'W2':calculated_theta_prime_01[2], 'b0':calculated_theta_prime_01[3], 'b1':calculated_theta_prime_01[4], 'b2':calculated_theta_prime_01[5], 'bias':calculated_theta_prime_01[6]}
+          calculated_theta_prime_001={'W0':calculated_theta_prime_001[0], 'W1':calculated_theta_prime_001[1], 'W2':calculated_theta_prime_001[2], 'b0':calculated_theta_prime_001[3], 'b1':calculated_theta_prime_001[4], 'b2':calculated_theta_prime_001[5], 'bias':calculated_theta_prime_001[6]}
+          #want to see if updateLR affects predictions or not
+          state = np.expand_dims(inputb[0][0], axis=0)
+          prediction_one = model.forward(state, calculated_theta_prime_one)
+          prediction_1 = model.forward(state, calculated_theta_prime_1)
+          prediction_01 = model.forward(state, calculated_theta_prime_01)
+          prediction_001 = model.forward(state, calculated_theta_prime_001)
+
+          #live: to do, check the scaling factors between weights and gradients
+          #IPython.embed()
+          means_for_this_epoch_ratio=[]
+          means_for_this_epoch_grads=[]
+          means_for_this_epoch_weights=[]
+          for index in range(len(my_gradients)):
+            means_for_this_epoch_ratio.append(np.mean(np.abs(np.divide(my_gradients[index], my_weights[index]))))
+            means_for_this_epoch_grads.append(np.mean(np.abs(my_gradients[index])))
+            means_for_this_epoch_weights.append(np.mean(np.abs(my_weights[index])))
+          all_means_ratio.append(means_for_this_epoch_ratio)
+          all_means_grads.append(means_for_this_epoch_grads)
+          all_means_weights.append(means_for_this_epoch_weights)
+          which_epochs.append(training_epoch)
+
+          print("\n\nDEBUGGING ULR IN TRAIN MAML...")
+          #IPython.embed()
+
+      if training_epoch==(config['sampler']['max_epochs']-1):
+        if(gradient_step==0):
+          all_means_arr = np.array(all_means_ratio)
+
+          plt.title('Ration of gradients/weights for a) WO b) W1 c) W2')
+          plt.subplot(311)
+          plt.plot(which_epochs, all_means_arr[:,0], '.')
+
+          #plt.title('W1: gradients/weights')
+          plt.subplot(312)
+          plt.plot(which_epochs, all_means_arr[:,1], '.')
+
+          #plt.title('W2: gradients/weights')
+          plt.subplot(313)
+          plt.plot(which_epochs, all_means_arr[:,2], '.')
+          #plt.show()
+          plt.savefig(path + "/ratioGradientsToWeights_graph.png")
+
+          np.save(path + '/debuggingLR_gradMag.npy', all_means_grads)
+          np.save(path + '/debuggingLR_weightMag.npy', all_means_weights)
+          np.save(path + '/debuggingLR_rationMag.npy', all_means_ratio)
+
       gradient_step += 1
 
     ####### Training loss #########
     ################################
 
     feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
-    train_loss = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)
-    traininglosses.append(train_loss)
+    metatrain_loss, metatrain_loss_withReg = sess.run([model.mse_loss[train_config['num_updates'] - 1], model.total_losses2[train_config['num_updates'] - 1]], feed_dict)
+    metatrain_losses_withReg.append(metatrain_loss_withReg)
+    metatrain_losses.append(metatrain_loss)
 
     ####### Validation loss ########
     ################################
@@ -136,6 +219,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
 
     ###### Saving epochs #####
     if training_epoch % 5 == 0:
+      #IPython.embed()
       name = "model_epoch" + str(training_epoch)
       saver.save(sess,  osp.join(path, name))
 
@@ -148,8 +232,15 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   # Make validation plot
   x = np.arange(0, config['sampler']['max_epochs'])
 
+  np.save(path + '/debuggingLR_metatrain_losses_withReg.npy', metatrain_losses_withReg)
+  np.save(path + '/debuggingLR_metatrain_losses.npy', metatrain_losses)
+  np.save(path + '/debuggingLR_vallosses.npy', vallosses)
+
+  print("before plot")
   #IPython.embed()
-  plt.plot(x, traininglosses, color ='r', label="Training")
+  plt.figure()
+  plt.plot(x, metatrain_losses_withReg, color ='r', label="metatrain_losses_withReg")
+  plt.plot(x, metatrain_losses, 'r--', label="metatrain_losses")
   plt.plot(x, vallosses, color='g', label="Validation, random")
   # plt.plot(x, v_mpc_loss_list, color='b', label="Validation, MPC")
   # plt.plot(x, v_rand_xy_loss_list, color='g', linestyle="--", label="Validation, random, xy")
@@ -157,4 +248,5 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   plt.legend(loc="upper right", prop = {"size":6})
   plt.title("MPE")
   plt.savefig(path + "/mpe_graph.png")
-  plt.show()
+  plt.clf()
+  #plt.show()
