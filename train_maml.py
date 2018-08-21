@@ -50,8 +50,26 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   all_means_grads=[]
   all_means_weights=[]
   which_epochs=[]
+
+  # Before training, save the weight and bias initialization in numpy form
+  trainable_vars = tf.trainable_variables()
+  init_values = sess.run(trainable_vars)
+  with open(osp.join(path, "weight_initializations.pickle"), "wb") as output_file:
+    pickle.dump(init_values, output_file)
+
+  ###############################################################################
+  # t0_init_values = pickle.load(open("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/weight_initializations.pickle", "r"))
+  # for i in range(len(t0_init_values)):
+  #   if not np.array_equal(t0_init_values[i], init_values[i]):
+  #     print("weight init differ")
+  #     IPython.embed()
+  ###############################################################################
+
+  all_random_indices = np.empty((0, len(all_indices)))
   for training_epoch in range(config['sampler']['max_epochs']):
     random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
+
+    all_random_indices = np.append(all_random_indices, np.expand_dims(random_indices, axis=0), axis=0)
 
     print("\n\n************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
@@ -89,6 +107,57 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
 
       #make the sess.run call to perform one metatraining iteration
       feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
+
+      #####################################################################################################
+      """weight_index = 1
+      #hard_drive_path = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/MAML_roach_copy/lr_10_hidden_layers_trial2"
+      hard_drive_path = path
+      np.save(hard_drive_path + "/inputa_" + str(gradient_step) + ".npy", inputa)
+
+      # t0_inputa = np.load("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/inputa_" + str(gradient_step) + ".npy")
+      # if not np.array_equal(inputa, t0_inputa):
+      #   print("batch inputs differ")
+      #   IPython.embed()
+      # Save the data batch
+      trainable_vars = tf.trainable_variables()
+      weights = sess.run(trainable_vars)
+      np.save(hard_drive_path + "/input_weight_layer_" + str(gradient_step) + ".npy", weights[weight_index])
+
+      # t0_input_weight_layer = np.load("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/input_weight_layer_" + str(gradient_step) + ".npy")
+      # if not np.array_equal(weights[weight_index], t0_input_weight_layer):
+      #   print("input layer weight matrix differs")
+      #   IPython.embed()
+      # Save the weights
+      inner_losses, inner_gradients, outer_losses, outer_gradients = sess.run([model.lossesa, model.gradients_of_theta_multiple, model.lossesb, model.gvs], feed_dict)
+      #IPython.embed()
+      np.save(hard_drive_path + "/inner_losses_" + str(gradient_step) + ".npy", inner_losses)
+      np.save(hard_drive_path + "/outer_losses_" + str(gradient_step) + ".npy", outer_losses)
+
+      np.save(hard_drive_path + "/inner_gradients_" + str(gradient_step) + ".npy", inner_gradients[0]) 
+      np.save(hard_drive_path + "/outer_gradients_" + str(gradient_step) + ".npy", outer_gradients[0])
+
+
+      # t0_inner_losses = np.load("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/inner_losses_" + str(gradient_step) + ".npy")    
+      # t0_outer_losses = np.load("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/outer_losses_" + str(gradient_step) + ".npy")    
+      # t0_inner_gradients = np.load("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/inner_gradients_" + str(gradient_step) + ".npy")    
+      # t0_outer_gradients = np.load("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Monday/lr_10.0_hidden_layers_2_trial_6/outer_gradients_" + str(gradient_step) + ".npy") 
+
+      # if not np.array_equal(t0_inner_losses, inner_losses):
+      #   print("inner losses differs")
+      #   IPython.embed()
+      # if not np.array_equal(t0_inner_gradients, inner_gradients[0]):
+      #   print("inner gradients differs")
+      #   IPython.embed()
+      # if not np.array_equal(t0_outer_losses, outer_losses):
+      #   print("outer losses differs")
+      #   IPython.embed()
+      # if not np.array_equal(t0_outer_gradients, outer_gradients[0]):
+      #   print("outer_gradients differs")
+      #   IPython.embed()
+
+      # Save the model.losses and shit"""
+      #####################################################################################################
+
       result = sess.run(input_tensors, feed_dict)
       #IPython.embed()
       #############################
@@ -137,16 +206,16 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
             calculated_theta_prime_01.append(my_weights[index]-0.01*my_gradients[index])
             calculated_theta_prime_001.append(my_weights[index]-0.001*my_gradients[index])
           #back to dicts for forward func
-          calculated_theta_prime_one={'W0':calculated_theta_prime_one[0], 'W1':calculated_theta_prime_one[1], 'W2':calculated_theta_prime_one[2], 'b0':calculated_theta_prime_one[3], 'b1':calculated_theta_prime_one[4], 'b2':calculated_theta_prime_one[5], 'bias':calculated_theta_prime_one[6]}
-          calculated_theta_prime_1={'W0':calculated_theta_prime_1[0], 'W1':calculated_theta_prime_1[1], 'W2':calculated_theta_prime_1[2], 'b0':calculated_theta_prime_1[3], 'b1':calculated_theta_prime_1[4], 'b2':calculated_theta_prime_1[5], 'bias':calculated_theta_prime_1[6]}
-          calculated_theta_prime_01={'W0':calculated_theta_prime_01[0], 'W1':calculated_theta_prime_01[1], 'W2':calculated_theta_prime_01[2], 'b0':calculated_theta_prime_01[3], 'b1':calculated_theta_prime_01[4], 'b2':calculated_theta_prime_01[5], 'bias':calculated_theta_prime_01[6]}
-          calculated_theta_prime_001={'W0':calculated_theta_prime_001[0], 'W1':calculated_theta_prime_001[1], 'W2':calculated_theta_prime_001[2], 'b0':calculated_theta_prime_001[3], 'b1':calculated_theta_prime_001[4], 'b2':calculated_theta_prime_001[5], 'bias':calculated_theta_prime_001[6]}
-          #want to see if updateLR affects predictions or not
-          state = np.expand_dims(inputb[0][0], axis=0)
-          prediction_one = model.forward(state, calculated_theta_prime_one)
-          prediction_1 = model.forward(state, calculated_theta_prime_1)
-          prediction_01 = model.forward(state, calculated_theta_prime_01)
-          prediction_001 = model.forward(state, calculated_theta_prime_001)
+          # calculated_theta_prime_one={'W0':calculated_theta_prime_one[0], 'W1':calculated_theta_prime_one[1], 'W2':calculated_theta_prime_one[2], 'b0':calculated_theta_prime_one[3], 'b1':calculated_theta_prime_one[4], 'b2':calculated_theta_prime_one[5], 'bias':calculated_theta_prime_one[6]}
+          # calculated_theta_prime_1={'W0':calculated_theta_prime_1[0], 'W1':calculated_theta_prime_1[1], 'W2':calculated_theta_prime_1[2], 'b0':calculated_theta_prime_1[3], 'b1':calculated_theta_prime_1[4], 'b2':calculated_theta_prime_1[5], 'bias':calculated_theta_prime_1[6]}
+          # calculated_theta_prime_01={'W0':calculated_theta_prime_01[0], 'W1':calculated_theta_prime_01[1], 'W2':calculated_theta_prime_01[2], 'b0':calculated_theta_prime_01[3], 'b1':calculated_theta_prime_01[4], 'b2':calculated_theta_prime_01[5], 'bias':calculated_theta_prime_01[6]}
+          # calculated_theta_prime_001={'W0':calculated_theta_prime_001[0], 'W1':calculated_theta_prime_001[1], 'W2':calculated_theta_prime_001[2], 'b0':calculated_theta_prime_001[3], 'b1':calculated_theta_prime_001[4], 'b2':calculated_theta_prime_001[5], 'bias':calculated_theta_prime_001[6]}
+          # #want to see if updateLR affects predictions or not
+          # state = np.expand_dims(inputb[0][0], axis=0)
+          # prediction_one = model.forward(state, calculated_theta_prime_one)
+          # prediction_1 = model.forward(state, calculated_theta_prime_1)
+          # prediction_01 = model.forward(state, calculated_theta_prime_01)
+          # prediction_001 = model.forward(state, calculated_theta_prime_001)
 
           #live: to do, check the scaling factors between weights and gradients
           #IPython.embed()
@@ -162,7 +231,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
           all_means_weights.append(means_for_this_epoch_weights)
           which_epochs.append(training_epoch)
 
-          print("\n\nDEBUGGING ULR IN TRAIN MAML...")
+          #print("\n\nDEBUGGING ULR IN TRAIN MAML...")
           #IPython.embed()
 
       if training_epoch==(config['sampler']['max_epochs']-1):
@@ -201,7 +270,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     ################################
 
     # Want to keep ts constant across rollouts
-    inputa = inputs_full_val[:, :, :update_bs]
+    inputa = inputs_full_val[:, :, :update_bs] # Err ... it's on the same data everytime. WHich should be the case, no? 
     inputb = inputs_full_val[:, :, update_bs:2*update_bs]
     labela = outputs_full_val[:, :, :update_bs]
     labelb = outputs_full_val[:, :, update_bs:2*update_bs]
@@ -217,6 +286,8 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     val_loss = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)
     vallosses.append(val_loss)
 
+    print("Validation loss:", val_loss)
+
     ###### Saving epochs #####
     if training_epoch % 5 == 0:
       #IPython.embed()
@@ -229,6 +300,9 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   # #IPython.embed()
   # saver.save(sess,  osp.join(path, name))
 
+  # Saving all the random indices
+  np.save(path + "/all_random_indices.npy", all_random_indices)
+  np.save(path + "/all_indices.npy", all_indices)
   # Make validation plot
   x = np.arange(0, config['sampler']['max_epochs'])
 

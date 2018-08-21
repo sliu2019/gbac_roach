@@ -23,21 +23,19 @@ class MAML:
         self.meta_learn_lr = config.get('meta_learn_lr', False)
         assert self.multi_updates > 0
 
-        self.normalize_before_loss = True #################################### NOTE: all outputs that are returned are now normalized (not true outputs!!!)
-
     def construct_model(self, input_tensors=None, prefix='metatrain_'):
 
         #placeholders to hold the inputs/outputs
             # a: training data for inner gradient
             # b: test data for meta gradient
         if input_tensors is None:
-            self.inputa = tf.placeholder(tf.float32,
+            self.inputa = tf.placeholder(self.regressor.tf_datatype,
                           shape=(None, self.config['update_batch_size'], self.regressor.dim_input))
-            self.inputb = tf.placeholder(tf.float32,
+            self.inputb = tf.placeholder(self.regressor.tf_datatype,
                           shape=(None, self.config['update_batch_size'], self.regressor.dim_input))
-            self.labela = tf.placeholder(tf.float32,
+            self.labela = tf.placeholder(self.regressor.tf_datatype,
                           shape=(None, self.config['update_batch_size'], self.regressor.dim_output))
-            self.labelb = tf.placeholder(tf.float32,
+            self.labelb = tf.placeholder(self.regressor.tf_datatype,
                           shape=(None, self.config['update_batch_size'], self.regressor.dim_output))
         else:
             self.inputa = input_tensors['inputa']
@@ -163,9 +161,10 @@ class MAML:
             #########################################################
 
             ####################out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates]
-            out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates, [tf.float32]*7, tf.float32, [tf.float32]*7, [tf.float32]*7]
-            result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype,
-                               parallel_iterations=self.config['meta_batch_size'])
+            out_dtype = [self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*7, self.regressor.tf_datatype, [self.regressor.tf_datatype]*7, [self.regressor.tf_datatype]*7]
+            #out_dtype = [tf.int32, [tf.int32]*num_updates, tf.int32, [tf.int32]*num_updates, [tf.int32]*7, tf.int32, [tf.int32]*7, [tf.int32]*7]
+            result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=self.config['meta_batch_size'])
+            #result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=1)
 
             #these return values are lists w a different entry for each task...
                 #average over all tasks when doing the outer gradient update (metatrain_op)
@@ -176,6 +175,8 @@ class MAML:
             self.update_lr_multiple = update_lr_multiple
             self.gradients_of_theta_multiple = gradients_of_theta_multiple
             self.theta_prime_multiple = theta_prime_multiple
+            self.lossesb = lossesb
+            self.lossesa = lossesa
 
         ################################################
         ## Calculate preupdate and postupdate losses

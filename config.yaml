@@ -15,10 +15,11 @@ training:
     multistep_loss: False
     steps: 0.001
     training_ratio: 0.9                  # Training/validation split
-    use_reg: False                        # If True, regularize the outer loss function
+    use_reg: True                        # If True, regularize the outer loss function
     regularization_weight: 0.001         # 0.001 # Weight on regularization term in loss function
     use_clf: True                         # Temporary: true means clear figure after plotting each time 
     use_clip: True                      # Temporary: true means clip the gradients
+    max_runs_per_surface: 396
 
 roach:
     frequency_value: 10
@@ -40,6 +41,7 @@ model:
         - 8
         - 8
     dim_bias: 5
+    nonlinearity: "relu"                # All lower case: can be "relu", "tanh"
 
 sampler:     
     batch_size: 200                     # Total number of datapoints collected during each data collection session (PER task)

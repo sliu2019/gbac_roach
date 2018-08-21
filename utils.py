@@ -7,13 +7,14 @@ import IPython
 import os
 import pickle
 
-def getDataFromDisk(itr, experiment_type, use_one_hot, use_camera, cheaty_training, state_representation):
+def getDataFromDisk(itr, experiment_type, use_one_hot, use_camera, cheaty_training, state_representation, config_training):
 
-  list_of_pathLists, num_training_rollouts = whichFiles(itr, experiment_type)
+  max_runs_per_surface = config_training['max_runs_per_surface']
+  list_of_pathLists, num_training_rollouts = whichFiles(itr, experiment_type, max_runs_per_surface)
   print("\n\nNumber of training rollouts: ", num_training_rollouts)
   return getData(list_of_pathLists, num_training_rollouts, use_one_hot, use_camera, cheaty_training, state_representation)
 
-def whichFiles(itr, experiment_type):
+def whichFiles(itr, experiment_type, max_runs_per_surface):
 
   ##############################
   #### SELECT DIRECTORY
@@ -37,7 +38,6 @@ def whichFiles(itr, experiment_type):
     #task_list=['turf', 'carpet', 'styrofoam', 'gravel'] #################### this decides what to read in
     task_list=['all']
     months = ['all']
-    max_runs_per_surface = 2 ###############################################################
     path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
     runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
     num_training_rollouts=0
@@ -84,7 +84,6 @@ def whichFiles(itr, experiment_type):
     if len(v):
       list_of_pathLists.append(v)
 
-  #IPython.embed() # check that ur code ch worked
   return list_of_pathLists, num_training_rollouts
 
 #each output of this should be
@@ -164,7 +163,7 @@ def quat_to_eulerDegrees(orientation):
   return [X,Y,Z] 
 
 #datatypes
-tf_datatype= tf.float32
+#tf_datatype= tf.float32
 np_datatype= np.float32
 
 def create_onehot(curr_surface, use_camera = False, mappings= None):

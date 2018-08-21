@@ -47,7 +47,7 @@ def run(d):
 	# old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
 	# old_model_num = 0
 	# previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
-	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/thorough_debug/ulr_1.0_use_reg_True_use_clip_True_use_clf_True/model_epoch0"
+	previous_dynamics_model = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/MAML_roach_copy/terrain_types_styrofoam_model_on_styrofoam/model0"
 	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16_NON_GBAC/model_epoch30"
 
 	num_steps_per_rollout= 140
@@ -81,7 +81,7 @@ def run(d):
 		noiseToSignal = 0.01
 
 	#datatypes
-	tf_datatype= tf.float32
+	tf_datatype= tf.float32 ############################# CHANGE BACK!
 	np_datatype= np.float32
 
 	#motor limits
@@ -105,6 +105,9 @@ def run(d):
 	config = d['config']
 	curr_agg_iter = d['curr_agg_iter']
 	save_dir = '/home/anagabandi/rllab-private/data/local/experiment/' + d['exp_name']
+	############################################################################################ CHANGE BACK! 
+	#save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name']
+
 	print("\n\nSAVING EVERYTHING TO: ", save_dir)
 
 	#make directories
@@ -136,7 +139,7 @@ def run(d):
 		#getDataFromDisk should give (tasks, rollouts from that task, each rollout has its points)
 		dataX_curr, dataY_curr, dataZ_curr, dataX_curr_full = getDataFromDisk(agg_itr, config['experiment_type'], 
 																			use_one_hot, use_camera, 
-																			cheaty_training, state_representation)
+																			cheaty_training, state_representation, config['training'])
 		if(agg_itr==0):
 			for i in range(len(dataX_curr)):
 				taski_num_rollout = len(dataX_curr[i])
@@ -220,16 +223,26 @@ def run(d):
 	model.construct_model(input_tensors=None, prefix='metatrain_')
 	model.summ_op = tf.summary.merge_all()
 
+	# GPU config proto
+	gpu_device = 0
+	gpu_frac = 0.7 #0.3
+	os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_device)
+	gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_frac)
+	config_2 = tf.ConfigProto(gpu_options=gpu_options,
+							log_device_placement=False,
+							allow_soft_placement=True,
+							inter_op_parallelism_threads=1,
+							intra_op_parallelism_threads=1)
 	# saving
 	saver = tf.train.Saver(max_to_keep=10)
-	sess = tf.InteractiveSession()
+	sess = tf.InteractiveSession(config=config_2)
 
 	# initialize tensorflow vars
 	tf.global_variables_initializer().run()
 	tf.train.start_queue_runners()
 
 	# set the mean/std of regressor according to mean/std of the data we have so far
-	regressor.update_params_data_dist(mean_inp, std_inp, mean_outp, std_outp, 1)
+	regressor.update_params_data_dist(mean_inp, std_inp, mean_outp, std_outp, len(inputs[0])*len(inputs[0][0])*4)
 
 	###########################################################
 	## TRAIN THE DYNAMICS MODEL
@@ -240,7 +253,20 @@ def run(d):
 		if(restore_previous):
 			print("\n\nRESTORING PREVIOUS DYNAMICS MODEL FROM ", previous_dynamics_model, " AND CONTINUING TRAINING...\n\n")
 			saver.restore(sess, previous_dynamics_model)
+			
+			"""trainable_vars = tf.trainable_variables()
+      		weights = sess.run(trainable_vars)
+     		with open(osp.join(osp.dirname(previous_dynamics_model), "weights.pickle"), "wb") as output_file:
+        		pickle.dump(weights, output_file)"""
 		#IPython.embed()
+		# np.save(save_dir + "/inputs.npy", inputs)
+		# np.save(save_dir + "/outputs.npy", outputs)
+		# # mean_inp.shape, std_inp.shape, mean_outp.shape, std_outp.shape
+		# np.save(save_dir + "/mean_inp.npy", mean_inp)
+		# np.save(save_dir + "/std_inp.npy", std_inp)
+		# np.save(save_dir + "/mean_outp.npy", mean_outp)
+		# np.save(save_dir + "/std_outp.npy", std_outp)
+		
 		train(inputs, outputs, curr_agg_iter, model, saver, sess, config, inputs_val, outputs_val)
 	else: 
 		print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
@@ -309,21 +335,22 @@ def main(config_path, extra_config):
 	vg = VariantGenerator()
 	vg.add('config', [config])
 	##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-	vg.add('meta_batch_size', [250]) #1300 #################
+	vg.add('meta_batch_size', [256]) #1300 #################
 	vg.add('update_batch_size', [16]) #############
-	vg.add('update_lr', [0.1]) #[1.0, 0.1, 0.01, 0.001]
+	vg.add('update_lr', [10.0]) #[1.0, 0.1, 0.01, 0.001]
 	vg.add('meta_lr', [0.001])
-	vg.add('max_epochs', [5]) ########################### 60
+	vg.add('max_epochs', [100])
 	vg.add('horizon', [5])
 	vg.add('curr_agg_iter', [0])
 	#vg.add('use_reg', [True, False]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('seed', [0])
+	vg.add('nonlinearity', ['relu', 'tanh'])
 	if config['training']['use_reg']:
 		vg.add('regularization_weight', [0.001])
 
 	vg.add('use_clip', [True])
-
+	#vg.add('backward_discouragement', [10, 11])
 	#IPython.embed()
 	##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
 	for v in vg.variants():
@@ -346,7 +373,7 @@ def main(config_path, extra_config):
 
 		#v['exp_name'] = "MAML_roach/thorough_debug/" + "ulr_" + str(v['config']['training']['update_lr']) + "_use_reg_" + str(v['config']['training']['use_reg']) + "_use_clip_" +str(v['config']['training']['use_clip']) + "_use_clf_" + str(v['config']['training']['use_clf']) + "_nonx_001"
 		
-		v['exp_name'] = "MAML_roach/large_lr_experiment/lr_" + str(v['config']['training']['update_lr'])
+		v['exp_name'] = "MAML_roach_copy/Monday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']]) + "_2_layers"
 
 		run_experiment_lite(
 			run,
