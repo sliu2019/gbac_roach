@@ -46,13 +46,11 @@ def run(d):
 	restore_previous = False
 	# old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
 	# old_model_num = 0
-	# previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/'+old_exp_name+'/model'+str(old_model_num)
-	previous_dynamics_model = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/MAML_roach_copy/terrain_types_styrofoam_model_on_styrofoam/model0"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16_NON_GBAC/model_epoch30"
+	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Tuesday_optimization/carpet_on_carpet/model_epoch10"
 
 	num_steps_per_rollout= 140
-	desired_shape_for_rollout = "right"                     #straight, left, right, circle_left, zigzag, figure8
-	save_rollout_run_num = 13
+	desired_shape_for_rollout = "left"                     #straight, left, right, circle_left, zigzag, figure8
+	save_rollout_run_num = 0
 	rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
 	#settings
@@ -194,10 +192,40 @@ def run(d):
 	print("outputs of NN: ", outputSize)
 
 	#calc mean/std on full dataset
-	mean_inp = np.expand_dims(np.mean(inputs,axis=(0,1,2)), axis=0)
-	std_inp = np.expand_dims(np.std(inputs,axis=(0,1,2)), axis=0)
-	mean_outp = np.expand_dims(np.mean(outputs,axis=(0,1,2)), axis=0)
-	std_outp = np.expand_dims(np.std(outputs,axis=(0,1,2)), axis=0)
+	if config["model"]["nonlinearity"] == "tanh":
+		# Do you scale inputs to [-1, 1] and then standardize outputs?
+		#IPython.embed()
+		inputs_array = np.array(inputs)
+		mean_inp = (inputs_array.max() + inputs_array.min())/2.0
+		std_inp = inputs_array.max() - mean_inp
+
+		mean_inp = mean_inp*np.ones((1, inputs_array.shape[3]))
+		std_inp = std_inp*np.ones((1, inputs_array.shape[3]))
+		#IPython.embed()
+
+		mean_outp = np.expand_dims(np.mean(outputs,axis=(0,1,2)), axis=0)
+		std_outp = np.expand_dims(np.std(outputs,axis=(0,1,2)), axis=0)
+		#IPython.embed() # HOw should I expand_dims? # check that after the operation, all inputs do lie in this range
+	elif config["model"]["nonlinearity"] == "sigmoid":
+		# Do you scale inputs to [0, 1] and then standardize outputs?
+		#IPython.embed()
+		inputs_array = np.array(inputs)
+		mean_inp = inputs_array.min()
+		std_inp = inputs_array.max() - mean_inp
+
+		mean_inp = mean_inp*np.ones((1, inputs_array.shape[3]))
+		std_inp = std_inp*np.ones((1, inputs_array.shape[3]))
+
+		#IPython.embed()
+
+		mean_outp = np.expand_dims(np.mean(outputs,axis=(0,1,2)), axis=0)
+		std_outp = np.expand_dims(np.std(outputs,axis=(0,1,2)), axis=0)
+		#IPython.embed() # HOw should I expand_dims? # check that after the operation, all inputs do lie in this range
+	else:  # for all the relu variants
+		mean_inp = np.expand_dims(np.mean(inputs,axis=(0,1,2)), axis=0)
+		std_inp = np.expand_dims(np.std(inputs,axis=(0,1,2)), axis=0)
+		mean_outp = np.expand_dims(np.mean(outputs,axis=(0,1,2)), axis=0)
+		std_outp = np.expand_dims(np.std(outputs,axis=(0,1,2)), axis=0)
 	print("\n\nCalulated means and stds... ", mean_inp.shape, std_inp.shape, mean_outp.shape, std_outp.shape, "\n\n")
 
 	###########################################################
@@ -205,7 +233,7 @@ def run(d):
 	###########################################################
 
 	# create regressor (NN dynamics model)
-	regressor = DeterministicMLPRegressor(inputSize, outputSize, dim_obs=outputSize, tf_datatype=tf_datatype, seed=config['seed'],**config['model'])
+	regressor = DeterministicMLPRegressor(inputSize, outputSize, dim_obs=outputSize, tf_datatype=tf_datatype, seed=config['seed'],weight_initializer=config['training']['weight_initializer'], **config['model'])
 
 	# create policy (MPC controller)
 	policy = Policy(regressor, inputSize, outputSize, 
@@ -225,7 +253,7 @@ def run(d):
 
 	# GPU config proto
 	gpu_device = 0
-	gpu_frac = 0.7 #0.3
+	gpu_frac = 0.8 #0.3
 	os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_device)
 	gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_frac)
 	config_2 = tf.ConfigProto(gpu_options=gpu_options,
@@ -335,21 +363,27 @@ def main(config_path, extra_config):
 	vg = VariantGenerator()
 	vg.add('config', [config])
 	##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-	vg.add('meta_batch_size', [256]) #1300 #################
-	vg.add('update_batch_size', [16]) #############
-	vg.add('update_lr', [10.0]) #[1.0, 0.1, 0.01, 0.001]
+	vg.add('meta_batch_size', [64]) #1300 #################
+	vg.add('update_batch_size', [23]) #############
+	vg.add('update_lr', [1.0]) #[1.0, 0.1, 0.01, 0.001]
 	vg.add('meta_lr', [0.001])
-	vg.add('max_epochs', [100])
+	vg.add('max_epochs', [15])
 	vg.add('horizon', [5])
+	vg.add('num_updates', [3]) #
 	vg.add('curr_agg_iter', [0])
 	#vg.add('use_reg', [True, False]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('seed', [0])
-	vg.add('nonlinearity', ['relu', 'tanh'])
+	vg.add('nonlinearity', ['relu'])
 	if config['training']['use_reg']:
-		vg.add('regularization_weight', [0.001])
+		vg.add('regularization_weight', [0.005]) #no reg for carp on carp: 0.000000001
 
 	vg.add('use_clip', [True])
+	vg.add("weight_initializer", ["truncated_normal"])
+	vg.add("dim_hidden", [[500]])
+
+	#vg.add('max_runs_per_surface', [5])
+
 	#vg.add('backward_discouragement', [10, 11])
 	#IPython.embed()
 	##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
@@ -372,9 +406,11 @@ def main(config_path, extra_config):
 		#v['exp_name'] = "MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16"
 
 		#v['exp_name'] = "MAML_roach/thorough_debug/" + "ulr_" + str(v['config']['training']['update_lr']) + "_use_reg_" + str(v['config']['training']['use_reg']) + "_use_clip_" +str(v['config']['training']['use_clip']) + "_use_clf_" + str(v['config']['training']['use_clf']) + "_nonx_001"
+		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/all_terrains_with_carpet_on_carpet_params_except_lr_" + str(v['config']['training']['update_lr'])
+		v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) + "_reg_weight_" + str(v['config']['training']['regularization_weight']) + "_ubs_" + str(v['config']['training']['update_batch_size'])
+		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']])
 		
-		v['exp_name'] = "MAML_roach_copy/Monday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']]) + "_2_layers"
-
+		
 		run_experiment_lite(
 			run,
 			sync_s3_pkl=True,
@@ -393,7 +429,13 @@ def main(config_path, extra_config):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
+	
+	#TRAIN TIME
 	default_path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'config.yaml')
+	
+	#TEST TIME
+	#default_path = '/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Monday_favorites/all_terrain/saved_config.yaml'
+
 	parser.add_argument('-p', '--config_path', type=str, default=default_path,
 				  help='directory for the config yaml file.')
 	parser.add_argument('-c', '--config', type=dict, default=dict())

@@ -39,6 +39,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   
   #writer for log
   path = logger.get_snapshot_dir() 
+  #IPython.embed()
   if log_config['log']:
       train_writer = tf.summary.FileWriter(path, sess.graph)
 

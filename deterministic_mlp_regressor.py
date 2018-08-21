@@ -6,7 +6,7 @@ from utils import *
 
 class DeterministicMLPRegressor(object):
     def __init__(self, dim_input, dim_output, dim_hidden=(64, 64), dim_conv1d=(8, 8, 8), nonlinearity = "relu", norm='None', dim_obs=None,
-                 dim_bias=0, multi_input=0, tf_datatype=tf.float32, seed=None):
+                 dim_bias=0, multi_input=0, tf_datatype=tf.float32, seed=None, weight_initializer = "truncated_normal"):
 
         # dims
         self.multi_input = multi_input
@@ -21,7 +21,12 @@ class DeterministicMLPRegressor(object):
         self.dim_bias = dim_bias
 
         # initializers
-        self.weight_initializer = tf.truncated_normal
+        self.weight_initializer_name = weight_initializer
+        if weight_initializer == "xavier":
+            self.weight_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype)
+        elif weight_initializer == "truncated_normal":
+            self.weight_initializer = tf.truncated_normal
+
         self.bias_initializer = tf.zeros
         self.seed = seed
         #IPython.embed() # check seed
@@ -44,6 +49,12 @@ class DeterministicMLPRegressor(object):
             self.activation = tf.nn.relu
         elif nonlinearity == "tanh":
             self.activation = tf.nn.tanh
+        elif nonlinearity == "leaky_relu":
+            self.activation = tf.nn.leaky_relu
+        elif nonlinearity == "elu":
+            self.activation = tf.nn.elu
+        elif nonlinearity == "sigmoid":
+            self.activation = tf.nn.sigmoid
 
     def construct_fc_weights(self, meta_loss=False):
         self.weights = self._construct_fc_weights(meta_loss=meta_loss)
@@ -61,26 +72,38 @@ class DeterministicMLPRegressor(object):
             #weights['bias'] = tf.Variable(self.xavier_initializer([self.dim_bias]), name='bias')
 
         # the 1st hidden layer
-        weights['W0'] = tf.Variable(self.weight_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]], stddev=0.01, seed=self.seed), name = 'W0')
+        if self.weight_initializer_name == "truncated_normal":
+            weights['W0'] = tf.Variable(self.weight_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]], stddev=0.01, seed=self.seed), name = 'W0')
+        elif self.weight_initializer_name == "xavier":
+            weights['W0'] = tf.Variable(self.weight_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]]), name='W0')
         weights['b0'] = tf.Variable(self.bias_initializer([self.dim_hidden[0]]), name = 'b0')
         #weights['W0'] = tf.Variable(self.xavier_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]]), name='W0')
         #weights['b0'] = tf.Variable(self.xavier_initializer([self.dim_hidden[0]]), name='b0')
 
         # intermediate hidden layers
         for i in range(0, len(self.dim_hidden)):
-            weights['W' + str(i+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[i], self.dim_hidden[i]], stddev=0.01, seed=self.seed), name='W'+str(i+1))
+            if self.weight_initializer_name == "truncated_normal":
+                weights['W' + str(i+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[i], self.dim_hidden[i]], stddev=0.01, seed=self.seed), name='W'+str(i+1))
+            elif self.weight_initializer_name == "xavier":
+                weights['W' + str(i+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[i], self.dim_hidden[i]]), name='W'+str(i+1))
             weights['b' + str(i+1)] = tf.Variable(self.bias_initializer([self.dim_hidden[i]]), name='b'+str(i+1))
             #weights['W' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i - 1], self.dim_hidden[i]]), name='W'+str(i))
             #weights['b' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i]]), name='b'+str(i))
 
-        weights['W' + str(len(self.dim_hidden)+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output], stddev=0.01, seed=self.seed),  name='W' + str(len(self.dim_hidden)+1))
+        if self.weight_initializer_name == "truncated_normal":
+            weights['W' + str(len(self.dim_hidden)+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output], stddev=0.01, seed=self.seed),  name='W' + str(len(self.dim_hidden)+1))
+        elif self.weight_initializer_name == "xavier":
+            weights['W' + str(len(self.dim_hidden)+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output]),  name='W' + str(len(self.dim_hidden)+1))
         weights['b' + str(len(self.dim_hidden)+1)] = tf.Variable(self.bias_initializer([self.dim_output]), name='b' + str(len(self.dim_hidden)+1))
         #weights['W' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_hidden[-1], self.dim_output]), name='W' + str(len(self.dim_hidden)))
         #weights['b' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_output]),name='b' + str(len(self.dim_hidden)))
         
         if meta_loss:
             for i in range(len(self.dim_conv1d)):
-                weights['W_1d_conv' + str(i)] = tf.Variable(self.weight_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output], stddev=0.01, seed=self.seed), name='W_1d_conv' + str(i))
+                if self.weight_initializer_name == "truncated_normal":
+                    weights['W_1d_conv' + str(i)] = tf.Variable(self.weight_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output], stddev=0.01, seed=self.seed), name='W_1d_conv' + str(i))
+                elif self.weight_initializer_name == "xavier":
+                    weights['W_1d_conv' + str(i)] = tf.Variable(self.weight_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output]), name='W_1d_conv' + str(i))
                 weights['b_1d_conv' + str(i)] = tf.Variable(self.bias_initializer([self.dim_output]), name='b_1d_conv' + str(i))
                 #weights['W_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output]), name='W_1d_conv' + str(i))
                 #weights['b_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_output]), name='b_1d_conv' + str(i))
