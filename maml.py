@@ -21,6 +21,7 @@ class MAML:
         self.multistep_loss = config['multistep_loss']
         self.multi_updates = config.get('multi_updates', 1)
         self.meta_learn_lr = config.get('meta_learn_lr', False)
+        self.regularization_weight = self.config['regularization_weight']
         assert self.multi_updates > 0
 
     def construct_model(self, input_tensors=None, prefix='metatrain_'):
@@ -76,6 +77,7 @@ class MAML:
                 inputa, inputb, labela, labelb = inp
                 task_outputbs, task_lossesb = [], []
                 fast_weights = weights
+                weights_norms = []
 
                 ########################################################################
                 ### calculate theta' using k consecutive points... from a single task
@@ -91,7 +93,7 @@ class MAML:
                     task_outputa = self.forward(inputa[i*k:(i+1)*k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
                         
                     # calculate loss(f_weights{0}(inputa))
-                    task_lossa = self.loss_func(task_outputa, labela[i*k:(i+1)*k])
+                    task_lossa = self.loss_func(task_outputa, labela[i*k:(i+1)*k])/float(k) 
 
                     # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                     grads = tf.gradients(task_lossa, list(fast_weights.values()))
@@ -116,12 +118,15 @@ class MAML:
                 # calculate loss(f_weights{1}(inputb))
                 task_lossesb.append(self.loss_func(output, labelb))
 
+                trainable_vars = tf.trainable_variables()
+                non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
+                regularizer = self.regularization_weight*tf.add_n(non_bias_weights)/float(len(non_bias_weights))
+                weights_norms.append(regularizer)
+
                 # if taking more inner-update gradient steps
                 for j in range(num_updates - 1):
                     for i in range(self.multi_updates):
-                        
-                        temp = self.forward(inputa[i * k:(i + 1) * k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
-                        loss = self.loss_func(temp, labela[i * k:(i + 1) * k])  # only reuse on the first iter
+                        loss = self.loss_func(self.forward(inputa[i * k:(i + 1) * k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i * k:(i + 1) * k])/float(k)  # only reuse on the first iter
 
                         # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                         grads = tf.gradients(loss, list(fast_weights.values()))
@@ -139,6 +144,11 @@ class MAML:
 
                     task_outputbs.append(output)
                     task_lossesb.append(self.loss_func(output, labelb))
+
+                    trainable_vars = tf.trainable_variables()
+                    non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
+                    regularizer = self.regularization_weight*tf.add_n(non_bias_weights)/float(len(non_bias_weights))
+                    weights_norms.append(regularizer)
                 # task_outputa :    f_weights{0}(inputa)
                 # task_outputbs :   [f_weights{1}(inputb), f_weights{2}(inputb), ...]
                 # task_lossa :      loss(f_weights{0}(inputa))
@@ -148,7 +158,7 @@ class MAML:
                 list_of_theta = [self.weights['W0'],self.weights['W1'],self.weights['W2'],self.weights['b0'],self.weights['b1'],self.weights['b2'],self.weights['bias']]
                 list_of_gradient = [gradients['W0'],gradients['W1'],gradients['W2'],gradients['b0'],gradients['b1'],gradients['b2'],gradients['bias']]
                 list_of_thetaPrime = [theta_prime['W0'],theta_prime['W1'],theta_prime['W2'],theta_prime['b0'],theta_prime['b1'],theta_prime['b2'],theta_prime['bias']]
-                task_output = [task_outputa, task_outputbs, task_lossa, task_lossesb, list_of_theta, self.update_lr, list_of_gradient, list_of_thetaPrime]
+                task_output = [task_outputa, task_outputbs, task_lossa, task_lossesb, list_of_theta, self.update_lr, list_of_gradient, list_of_thetaPrime, weights_norms]
                 return task_output
 
             # to initialize the batch norm vars
@@ -161,7 +171,7 @@ class MAML:
             #########################################################
 
             ####################out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates]
-            out_dtype = [self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*7, self.regressor.tf_datatype, [self.regressor.tf_datatype]*7, [self.regressor.tf_datatype]*7]
+            out_dtype = [self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*7, self.regressor.tf_datatype, [self.regressor.tf_datatype]*7, [self.regressor.tf_datatype]*7, [self.regressor.tf_datatype]*num_updates]
             #out_dtype = [tf.int32, [tf.int32]*num_updates, tf.int32, [tf.int32]*num_updates, [tf.int32]*7, tf.int32, [tf.int32]*7, [tf.int32]*7]
             result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=self.config['meta_batch_size'])
             #result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=1)
@@ -169,12 +179,13 @@ class MAML:
             #these return values are lists w a different entry for each task...
                 #average over all tasks when doing the outer gradient update (metatrain_op)
             ####################outputas, outputbs, lossesa, lossesb = result
-            outputas, outputbs, lossesa, lossesb, theta_multiple, update_lr_multiple, gradients_of_theta_multiple, theta_prime_multiple = result
+            outputas, outputbs, lossesa, lossesb, theta_multiple, update_lr_multiple, gradients_of_theta_multiple, theta_prime_multiple, norms_of_weights = result
             self.check_outputbs = outputbs
             self.theta_multiple = theta_multiple
             self.update_lr_multiple = update_lr_multiple
             self.gradients_of_theta_multiple = gradients_of_theta_multiple
             self.theta_prime_multiple = theta_prime_multiple
+            self.norms_of_weights = norms_of_weights
             self.lossesb = lossesb
             self.lossesa = lossesa
 
@@ -208,15 +219,14 @@ class MAML:
         # The reg term needs to be specific to each num_update 
 
         if self.config['use_reg']:
-            self.regularization_weight = self.config['regularization_weight']
-            self.trainable_vars = tf.trainable_variables()
-            self.regularizer = self.regularization_weight*tf.add_n([tf.nn.l2_loss(v) for v in self.trainable_vars if ('bias' not in v.name and 'b' not in v.name)])
-            self.total_losses2 = [tf.reduce_mean(lossesb[j] + self.regularizer) for j in range(num_updates)]
+            self.total_losses2 = [tf.reduce_mean(lossesb[j] + self.norms_of_weights[j]) for j in range(num_updates)]
         else: 
             self.total_losses2 = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
 
         
         self.mse_loss = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
+
+        self.regularizer = tf.reduce_mean(self.norms_of_weights[num_updates-1])
         #IPython.embed()
 
         #########################################

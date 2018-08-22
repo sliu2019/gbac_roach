@@ -363,11 +363,11 @@ def main(config_path, extra_config):
 	vg = VariantGenerator()
 	vg.add('config', [config])
 	##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-	vg.add('meta_batch_size', [64]) #1300 #################
-	vg.add('update_batch_size', [23]) #############
+	vg.add('meta_batch_size', [32, 64]) #1300 #################
+	vg.add('update_batch_size', [8]) #############
 	vg.add('update_lr', [1.0]) #[1.0, 0.1, 0.01, 0.001]
 	vg.add('meta_lr', [0.001])
-	vg.add('max_epochs', [15])
+	vg.add('max_epochs', [1])
 	vg.add('horizon', [5])
 	vg.add('num_updates', [3]) #
 	vg.add('curr_agg_iter', [0])
@@ -407,7 +407,8 @@ def main(config_path, extra_config):
 
 		#v['exp_name'] = "MAML_roach/thorough_debug/" + "ulr_" + str(v['config']['training']['update_lr']) + "_use_reg_" + str(v['config']['training']['use_reg']) + "_use_clip_" +str(v['config']['training']['use_clip']) + "_use_clf_" + str(v['config']['training']['use_clf']) + "_nonx_001"
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/all_terrains_with_carpet_on_carpet_params_except_lr_" + str(v['config']['training']['update_lr'])
-		v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) + "_reg_weight_" + str(v['config']['training']['regularization_weight']) + "_ubs_" + str(v['config']['training']['update_batch_size'])
+		v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates_2/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) + "_reg_weight_" + str(v['config']['training']['regularization_weight']) + "_ubs_" + str(v['config']['training']['update_batch_size'])
+		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/averaging_debug"
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']])
 		
 		
