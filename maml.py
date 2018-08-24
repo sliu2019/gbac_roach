@@ -22,6 +22,7 @@ class MAML:
         self.multi_updates = config.get('multi_updates', 1)
         self.meta_learn_lr = config.get('meta_learn_lr', False)
         self.regularization_weight = self.config['regularization_weight']
+        self.k = self.config['update_batch_size']//self.multi_updates
         assert self.multi_updates > 0
 
     def construct_model(self, input_tensors=None, prefix='metatrain_'):
@@ -82,18 +83,15 @@ class MAML:
                 ########################################################################
                 ### calculate theta' using k consecutive points... from a single task
                 ########################################################################
-
-                # calculate output of f_weights{0}(inputa)
-                k = self.config['update_batch_size']//self.multi_updates
                 
 
                 for i in range(self.multi_updates):
                     
                     
-                    task_outputa = self.forward(inputa[i*k:(i+1)*k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
+                    task_outputa = self.forward(inputa[i*self.k:(i+1)*self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
                         
                     # calculate loss(f_weights{0}(inputa))
-                    task_lossa = self.loss_func(task_outputa, labela[i*k:(i+1)*k])/float(k) 
+                    task_lossa = self.loss_func(task_outputa, labela[i*self.k:(i+1)*self.k])/float(self.k) 
 
                     # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                     grads = tf.gradients(task_lossa, list(fast_weights.values()))
@@ -126,7 +124,7 @@ class MAML:
                 # if taking more inner-update gradient steps
                 for j in range(num_updates - 1):
                     for i in range(self.multi_updates):
-                        loss = self.loss_func(self.forward(inputa[i * k:(i + 1) * k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i * k:(i + 1) * k])/float(k)  # only reuse on the first iter
+                        loss = self.loss_func(self.forward(inputa[i * self.k:(i + 1) * self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i * self.k:(i + 1) * self.k])/float(self.k)  # only reuse on the first iter
 
                         # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                         grads = tf.gradients(loss, list(fast_weights.values()))
@@ -237,14 +235,13 @@ class MAML:
         #standard supervised learning
 
         self.pretrain_op = tf.train.AdamOptimizer(self.meta_lr).minimize(self.total_loss1)
-        k = self.config['update_batch_size'] // self.multi_updates
         fast_weights = weights
         inputa = inputa[0]
         labela = labela[0]
-        for i in range(self.multi_updates):
-            task_outputa = self.forward(inputa[i*k:(i+1)*k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
+        for i in range(self.multi_updates): # This used to say multi-updates???
+            task_outputa = self.forward(inputa[i*self.k:(i+1)*self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
             # calculate loss(f_weights{0}(inputa))
-            task_lossa = self.loss_func(task_outputa, labela[i*k:(i+1)*k])
+            task_lossa = self.loss_func(task_outputa, labela[i*self.k:(i+1)*self.k])/float(self.k)
             # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
             grads = tf.gradients(task_lossa, list(fast_weights.values()))
             gradients = dict(zip(fast_weights.keys(), grads))
@@ -268,7 +265,7 @@ class MAML:
 
         ##################### #this is just one gradient step (ie normal training)
         ##################### #used for debugging other parts of code
-        #self.gvs = gvs = optimizer.compute_gradients(self.total_loss1) 
+        ##############self.gvs = gvs = optimizer.compute_gradients(self.total_loss1) 
         self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[self.config['num_updates']-1]) #this is real maml loss func (ie adapt)
         if self.config['use_clip']:
             self.gvs = gvs = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in gvs]
