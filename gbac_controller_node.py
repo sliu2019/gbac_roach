@@ -37,6 +37,7 @@ class GBAC_Controller(object):
             baud_rate= 57600,
             default_addrs= None,
             update_batch_size= 0,
+            num_updates=1,
             #anything after this is unused by this code
             x_index= 0,
             y_index= 1,
@@ -54,6 +55,7 @@ class GBAC_Controller(object):
         self.baud_rate = baud_rate
         self.default_addrs = default_addrs
         self.update_batch_size = update_batch_size
+        self.num_updates = num_updates
 
         self.lock = Condition()
         self.mocap_info = PoseStamped()
@@ -108,6 +110,7 @@ class GBAC_Controller(object):
         self.save_moved_to_next=[]
         self.save_desired_heading=[]
         self.save_curr_heading=[]
+        list_best_action_sequences = []
         curr_line_segment = 0
         old_curr_forward=0
 
@@ -227,13 +230,13 @@ class GBAC_Controller(object):
                 'save_curr_heading': self.save_curr_heading,
                 }
 
-                return(self.traj_taken, self.actions_taken, self.policy.desired_states, list_robot_info, list_mocap_info, old_saving_format_dict)
+                return(self.traj_taken, self.actions_taken, self.policy.desired_states, list_robot_info, list_mocap_info, old_saving_format_dict, list_best_action_sequences)
 
             ########################
             ### UPDATE REGRESSOR ###
             ########################
 
-            #get the past K points (s,a,ds)
+            # get the past K points (s,a,ds)
             length= len(self.traj_taken)
             K = self.update_batch_size
             if(length>K):
@@ -263,14 +266,15 @@ class GBAC_Controller(object):
                 print("....done resetting to theta*")
 
                 #take gradient step on theta* using the past K points
-                self.sess.run([self.model.test_op], feed_dict=feed_dict)
+                for _ in range(self.num_updates):
+                    self.sess.run([self.model.test_op], feed_dict=feed_dict)
 
             ########################
             #### COMPUTE ACTION ####
             ########################
 
             #get the best action
-            optimal_action, curr_line_segment, old_curr_forward, info_for_saving = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward)            
+            optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward)            
 
             ########################
             ######## SAVING ########
@@ -287,6 +291,7 @@ class GBAC_Controller(object):
             self.save_moved_to_next.append(info_for_saving['save_moved_to_next'])
             self.save_desired_heading.append(info_for_saving['save_desired_heading'])
             self.save_curr_heading.append(info_for_saving['save_curr_heading'])
+            list_best_action_sequences.append(best_sequence_of_actions)
 
             #keep looping
             self.rate.sleep()

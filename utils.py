@@ -7,26 +7,28 @@ import IPython
 import os
 import pickle
 
-def getDataFromDisk(itr, experiment_type, use_one_hot, use_camera, cheaty_training, state_representation, config_training):
+def getDataFromDisk(experiment_type, use_one_hot, use_camera, cheaty_training, state_representation, config_training, agg_itr = 0, agg_datapaths = [""]):
 
   max_runs_per_surface = config_training['max_runs_per_surface']
-  list_of_pathLists, num_training_rollouts = whichFiles(itr, experiment_type, max_runs_per_surface)
+  task_list = config_training['task_list']
+  list_of_pathLists, num_training_rollouts = whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr, agg_datapaths)
   print("\n\nNumber of training rollouts: ", num_training_rollouts)
   return getData(list_of_pathLists, num_training_rollouts, use_one_hot, use_camera, cheaty_training, state_representation)
 
-def whichFiles(itr, experiment_type, max_runs_per_surface):
+def whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr, agg_datapaths):
 
   ##############################
   #### SELECT DIRECTORY
   ##############################
   
-  if(itr==0):
+  if(agg_itr==0):
     #random data
     #data_path = "/media/camera_training_data"
     data_path = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/camera_training_data"
   else:
     print("\n\nNOT IMPLEMENTED: getting data (for anything other than random)...")
     IPython.embed()
+
   dirs = os.listdir(data_path)
 
   ##############################
@@ -36,7 +38,7 @@ def whichFiles(itr, experiment_type, max_runs_per_surface):
   if(experiment_type=='terrain_types'):
 
     #task_list=['turf', 'carpet', 'styrofoam', 'gravel'] #################### this decides what to read in
-    task_list=['all']
+    #task_list=['turf']
     months = ['all']
     path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
     runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
@@ -80,7 +82,7 @@ def whichFiles(itr, experiment_type, max_runs_per_surface):
 
   list_of_pathLists = []
 
-  for k, v in path_lsts.items():
+  for k, v in path_lsts.items(): #### MAKE SURE YOU ALPHABETIZE THE KEYS HERE, Otherwise aGGREGATION WILL BE AWKWARD. Do the same thing for aggregation so the lists correspond
     if len(v):
       list_of_pathLists.append(v)
 

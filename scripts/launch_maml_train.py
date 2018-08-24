@@ -42,16 +42,22 @@ from rllab.misc.instrument import VariantGenerator
 def run(d):
 
 	#restore old dynamics model
-	train_now = True
-	restore_previous = False
+	train_now = False
+	restore_previous = True
 	# old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
 	# old_model_num = 0
-	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Tuesday_optimization/carpet_on_carpet/model_epoch10"
-
-	num_steps_per_rollout= 140
-	desired_shape_for_rollout = "left"                     #straight, left, right, circle_left, zigzag, figure8
+	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC/model_epoch45"
+	#previous_dynamics_model = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_epoch45"
+	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Tuesday_optimization/carpet_on_carpet_2/model_epoch10"
+	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/model_epoch45"
+	
+	desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
 	save_rollout_run_num = 0
 	rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
+
+	num_steps_per_rollout= 135 ####135, 150 turf right... 80 for straight
+	if(desired_shape_for_rollout=="straight"):
+		num_steps_per_rollout= 80
 
 	#settings
 	cheaty_training = False
@@ -102,9 +108,8 @@ def run(d):
 	#vars from config
 	config = d['config']
 	curr_agg_iter = d['curr_agg_iter']
+	#save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name'] ############################################################################################ CHANGE BACK! 
 	save_dir = '/home/anagabandi/rllab-private/data/local/experiment/' + d['exp_name']
-	############################################################################################ CHANGE BACK! 
-	#save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name']
 
 	print("\n\nSAVING EVERYTHING TO: ", save_dir)
 
@@ -131,13 +136,13 @@ def run(d):
 	dataY_val=[]
 	dataZ_val=[]
 
-	agg_itr = 0
+	agg_itr = config['aggregation']['agg_itr']
 	training_ratio = config['training']['training_ratio']
 	for agg_itr in range(curr_agg_iter+1):
 		#getDataFromDisk should give (tasks, rollouts from that task, each rollout has its points)
-		dataX_curr, dataY_curr, dataZ_curr, dataX_curr_full = getDataFromDisk(agg_itr, config['experiment_type'], 
+		dataX_curr, dataY_curr, dataZ_curr, dataX_curr_full = getDataFromDisk(config['experiment_type'], 
 																			use_one_hot, use_camera, 
-																			cheaty_training, state_representation, config['training'])
+																			cheaty_training, state_representation, config['training'], **config['aggregation'])
 		if(agg_itr==0):
 			for i in range(len(dataX_curr)):
 				taski_num_rollout = len(dataX_curr[i])
@@ -253,7 +258,7 @@ def run(d):
 
 	# GPU config proto
 	gpu_device = 0
-	gpu_frac = 0.8 #0.3
+	gpu_frac = 0.3 #0.8 #0.3
 	os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_device)
 	gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_frac)
 	config_2 = tf.ConfigProto(gpu_options=gpu_options,
@@ -300,7 +305,7 @@ def run(d):
 		print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
 		saver.restore(sess, previous_dynamics_model)
 		#IPython.embed()
-	return
+	#return
 	#IPython.embed()
 	predicted_traj = regressor.do_forward_sim(dataX_full[0][0][27:45], dataY[0][0][27:45], state_representation)
 	#np.save(save_dir + '/forwardsim_true.npy', dataX_full[0][7][27:45])
@@ -313,12 +318,12 @@ def run(d):
 	#create controller node
 	controller_node = GBAC_Controller(sess=sess, policy=policy, model=model,
 									state_representation=state_representation, use_pid_mode=use_pid_mode, 
-									default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], **config['roach'])
+									default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], num_updates=config['training']['num_updates'], **config['roach'])
 
 	#do 1 rollout
 	print("\n\n\nPAUSING... right before a controller run... RESET THE ROBOT TO A GOOD LOCATION BEFORE CONTINUING...")
 	#IPython.embed()
-	resulting_x, selected_u, desired_seq, list_robot_info, list_mocap_info, old_saving_format_dict = controller_node.run(num_steps_per_rollout, desired_shape_for_rollout)
+	resulting_x, selected_u, desired_seq, list_robot_info, list_mocap_info, old_saving_format_dict, list_best_action_sequences = controller_node.run(num_steps_per_rollout, desired_shape_for_rollout)
 	
 	#where to save this rollout
 	pathStartName = save_dir + '/saved_rollouts/'+rollout_save_filename+ '_aggIter' +str(curr_agg_iter)
@@ -334,6 +339,7 @@ def run(d):
 	np.save(pathStartName + '/oldFormat_movedtonext.npy', old_saving_format_dict['save_moved_to_next'])
 	np.save(pathStartName + '/oldFormat_desheading.npy', old_saving_format_dict['save_desired_heading'])
 	np.save(pathStartName + '/oldFormat_currheading.npy', old_saving_format_dict['save_curr_heading'])
+	np.save(pathStartName + '/list_best_action_sequences.npy', list_best_action_sequences)
 
 	yaml.dump(config, open(osp.join(pathStartName, 'saved_config.yaml'), 'w'))
 
@@ -363,27 +369,33 @@ def main(config_path, extra_config):
 	vg = VariantGenerator()
 	vg.add('config', [config])
 	##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-	vg.add('meta_batch_size', [32, 64]) #1300 #################
-	vg.add('update_batch_size', [8]) #############
-	vg.add('update_lr', [1.0]) #[1.0, 0.1, 0.01, 0.001]
+	vg.add('meta_batch_size', [64]) #1300 #################
 	vg.add('meta_lr', [0.001])
-	vg.add('max_epochs', [1])
+
+	vg.add('update_batch_size', [8]) #############
+	vg.add('update_lr', [0.0]) #[3.0, 4.0, 6.0, 7.0] ############ 2 for the adaptation model, 0 for the NON_GBAC one
+	vg.add('num_updates', [1]) #
+
+	vg.add('max_epochs', [50])
 	vg.add('horizon', [5])
-	vg.add('num_updates', [3]) #
+	
 	vg.add('curr_agg_iter', [0])
-	#vg.add('use_reg', [True, False]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
-	vg.add('seed', [0])
+	vg.add('seed', [0]) 
 	vg.add('nonlinearity', ['relu'])
 	if config['training']['use_reg']:
-		vg.add('regularization_weight', [0.005]) #no reg for carp on carp: 0.000000001
+		vg.add('regularization_weight', [0.002]) #no reg for carp on carp: 0.000000001
 
 	vg.add('use_clip', [True])
 	vg.add("weight_initializer", ["truncated_normal"])
-	vg.add("dim_hidden", [[500]])
+	vg.add("dim_hidden", [[100]])
+	vg.add("task_list", [["all"]])
 
-	#vg.add('max_runs_per_surface', [5])
+	vg.add('max_runs_per_surface', [5]) #396, 5
 
+	# Aggregation
+	vg.add('agg_itr', [0])
+	vg.add('agg_datapaths', [["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all", "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC"]])
 	#vg.add('backward_discouragement', [10, 11])
 	#IPython.embed()
 	##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
@@ -407,11 +419,17 @@ def main(config_path, extra_config):
 
 		#v['exp_name'] = "MAML_roach/thorough_debug/" + "ulr_" + str(v['config']['training']['update_lr']) + "_use_reg_" + str(v['config']['training']['use_reg']) + "_use_clip_" +str(v['config']['training']['use_clip']) + "_use_clf_" + str(v['config']['training']['use_clf']) + "_nonx_001"
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/all_terrains_with_carpet_on_carpet_params_except_lr_" + str(v['config']['training']['update_lr'])
-		v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates_2/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) + "_reg_weight_" + str(v['config']['training']['regularization_weight']) + "_ubs_" + str(v['config']['training']['update_batch_size'])
+		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates_2/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) +"_ubs_" + str(v['config']['training']['update_batch_size']) +"_reg_weight_" + str(v['config']['training']['regularization_weight'])
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/averaging_debug"
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']])
+		#IPython.embed()
+		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
 		
+		v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/NON_GBAC/carpet_trial"
+		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/styrofoam_trial"
 		
+		#v['exp_name'] = "/MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/styrofoam"
+		#v['exp_name'] = "MAML_roach/Thursday_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
 		run_experiment_lite(
 			run,
 			sync_s3_pkl=True,

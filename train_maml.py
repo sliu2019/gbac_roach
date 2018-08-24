@@ -38,7 +38,10 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   #IPython.embed() # check all_indices, rand_indices shape, look inside inputs_full to see if neglected tasks occupy empty space
   
   #writer for log
-  path = logger.get_snapshot_dir() 
+  path = logger.get_snapshot_dir() ######### UNCOMMENT LATER
+  #path = osp.join("/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1", osp.split(path)[1])
+  #path = osp.join("/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization", osp.split(path)[1])
+  
   #IPython.embed()
   if log_config['log']:
       train_writer = tf.summary.FileWriter(path, sess.graph)
@@ -184,7 +187,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
           t0 = time.time()
           prelosses, postlosses = [], []
 
-      if training_epoch%5==0:
+      '''if training_epoch%5==0:
         if(gradient_step==0):
           check_outputbs, theta_multiple, update_lr_multiple, gradients_of_theta_multiple, theta_prime_multiple = sess.run([model.check_outputbs, model.theta_multiple, model.update_lr_multiple, model.gradients_of_theta_multiple, model.theta_prime_multiple], feed_dict)
 
@@ -255,7 +258,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
 
           np.save(path + '/debuggingLR_gradMag.npy', all_means_grads)
           np.save(path + '/debuggingLR_weightMag.npy', all_means_weights)
-          np.save(path + '/debuggingLR_rationMag.npy', all_means_ratio)
+          np.save(path + '/debuggingLR_rationMag.npy', all_means_ratio)'''
 
       gradient_step += 1
 

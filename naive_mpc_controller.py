@@ -155,9 +155,9 @@ class NaiveMPCController(Policy, Serializable):
             observation = next_observation
 
         #evaluate all options and pick the best one
-        optimal_action, curr_line_segment, old_curr_forward, info_for_saving = self.select_the_best_one_for_traj_follow(full_curr_state, a, np.array(resulting_states), curr_line_segment, old_curr_forward)
+        optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions = self.select_the_best_one_for_traj_follow(full_curr_state, a, np.array(resulting_states), curr_line_segment, old_curr_forward)
 
-        return optimal_action, curr_line_segment, old_curr_forward, info_for_saving
+        return optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions
 
     #################################################
     ##### ACTION SELECTION when trajectory following
@@ -363,7 +363,7 @@ class NaiveMPCController(Policy, Serializable):
 
         best_score = np.min(scores)
         best_sim_number = np.argmin(scores) 
-        best_sequence = all_samples[:,best_sim_number,:]
+        best_sequence_of_actions = all_samples[:,best_sim_number,:]
 
         if(self.visualize_rviz):
             #publish the desired traj
@@ -427,8 +427,8 @@ class NaiveMPCController(Policy, Serializable):
         }
 
         #the 0th entry is the currently executing action... so the 1st entry is the optimal action to take
-        action_to_take = np.copy(best_sequence[1])
+        action_to_take = np.copy(best_sequence_of_actions[1])
 
-        return action_to_take, curr_line_segment, old_curr_forward, info_for_saving
+        return action_to_take, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions
 
 

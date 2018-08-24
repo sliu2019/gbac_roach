@@ -8,7 +8,7 @@ training:
     meta_batch_size: 250                   # Number of tasks sampled per meta-update
     update_batch_size: 16                # Number of data points per inner-update ("K" in k-shot learning)
     meta_lr: 0.001                       # Meta learning rate
-    update_lr: 10.0                      # Inner-update learning rate
+    update_lr: 2.0                      # Inner-update learning rate
     num_updates: 3                       # Number of inner updates
     meta_loss: False                     # If True, learns the loss in the inner-update
     stop_grad: False                     # If True, do not use second derivatices in the inner-update
@@ -20,7 +20,14 @@ training:
     use_clf: True                         # Temporary: true means clear figure after plotting each time 
     use_clip: True                      # Temporary: true means clip the gradients
     max_runs_per_surface: 396
+    task_list:
+        - "all"
     weight_initializer: "xavier"        # "xavier" or "truncated_normal"
+
+aggregation:
+    agg_itr: 0                          # Choose 0 for no aggregation, 1 for 1 iteration (?)
+    agg_datapaths:                      # List of saved_rollout folders from on-policy runs
+        -"/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/carpet/saved_rollouts"
 
 roach:
     frequency_value: 10
@@ -71,9 +78,9 @@ policy:
     n_candidates: 2000                   # Number of candidates actions when performing MPC
     horizon: 5                          # Horizon of the planning in the MPC
     test_regressor: False
-    horiz_penalty_factor: 30
+    horiz_penalty_factor: 50
     backward_discouragement: 10
-    heading_penalty_factor: 5
+    heading_penalty_factor: 5      #40,10,30 turf right... 50,10,5 sty left... 40,10,5 everything else
 
 testing:
     animated: False                       # If True, renders the test rollouts
@@ -86,7 +93,7 @@ testing:
     meta_loss: False                     # If True, learns the loss in the inner-update
     stop_grad: False                     # If True, do not use second derivatices in the inner-update
     meta_lr: 0.001
-    update_lr: 10.0
+    update_lr: 2.0
     render:
         stationary_camera: False
         xpos: 0
