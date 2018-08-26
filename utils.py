@@ -7,84 +7,138 @@ import IPython
 import os
 import pickle
 
-def getDataFromDisk(experiment_type, use_one_hot, use_camera, cheaty_training, state_representation, config_training, agg_itr = 0, agg_datapaths = [""]):
+def getDataFromDisk(experiment_type, use_one_hot, use_camera, cheaty_training, state_representation, agg_itr_counter, config_training):
 
   max_runs_per_surface = config_training['max_runs_per_surface']
   task_list = config_training['task_list']
-  list_of_pathLists, num_training_rollouts = whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr, agg_datapaths)
+  list_of_pathLists, num_training_rollouts = whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr_counter)
   print("\n\nNumber of training rollouts: ", num_training_rollouts)
   return getData(list_of_pathLists, num_training_rollouts, use_one_hot, use_camera, cheaty_training, state_representation)
 
-def whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr, agg_datapaths):
+def whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr_counter):
 
-  ##############################
-  #### SELECT DIRECTORY
-  ##############################
-  
-  if(agg_itr==0):
-    #random data
-    #data_path = "/media/camera_training_data"
-    data_path = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/camera_training_data"
-  else:
-    print("\n\nNOT IMPLEMENTED: getting data (for anything other than random)...")
-    IPython.embed()
-
-  dirs = os.listdir(data_path)
-
-  ##############################
-  ### WHICH FILES FROM THAT DIR
-  ##############################
+  #################################
+  ### EXPERIMENT: TERRAIN TYPES ###
+  #################################
 
   if(experiment_type=='terrain_types'):
+    
+    ###########################
+    ####### RANDOM DATA #######
+    ###########################
 
-    #task_list=['turf', 'carpet', 'styrofoam', 'gravel'] #################### this decides what to read in
-    #task_list=['turf']
-    months = ['all']
-    path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
-    runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
-    num_training_rollouts=0
+    if(agg_itr_counter==0):
 
-    for directory in dirs:  
-      lst = directory.split("_")
-      surface = lst[0]
-      month = lst[2]
-      day = lst[3]
+      #######LOCATION OF RANDOM DATA
+      data_path = "/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/camera_training_data"
+      dirs = os.listdir(data_path)
 
-      if(day in ['91']): #'23', '24'
-        junk=1
-      else:
-        if (surface in task_list or ("all" in task_list and surface!="joystick")) and ((month in months) or ("all" in months)):
-          directory_path = os.path.join(data_path, directory)
-          dir_files = [x for x in os.listdir(directory_path) if not os.path.isdir(os.path.join(directory_path, x))]
-          dir_files = [x for x in dir_files if (os.path.splitext(x)[1] == ".obj")]
-          dir_files.sort()
-          if (len(dir_files) % 3) != 0:
-            print("Something wacky in folder: ", directory_path)
-          for i in range(int(len(dir_files)/3)):
-            if runs_per_surface[surface] < max_runs_per_surface:
-              image_file = dir_files[3*i]
-              mocap_file = dir_files[3*i +1]
-              robot_file = dir_files[3*i + 2]
-              num_training_rollouts+=1
+      #######GET FILENAMES FROM THAT DIRECTORY
+      months = ['all']
+      path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []}
+      runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
+      num_training_rollouts=0
 
-              if image_file[0] == mocap_file[0] == robot_file[0]:
-                path_lsts[surface].append(os.path.join(directory_path, image_file))
-                path_lsts[surface].append(os.path.join(directory_path, mocap_file))
-                path_lsts[surface].append(os.path.join(directory_path, robot_file))
-                runs_per_surface[surface] = runs_per_surface[surface] + 1
-              else: 
-                print("error w reading initial random data")
-                IPython.embed()
+      for directory in dirs:  
+        lst = directory.split("_")
+        surface = lst[0]
+        month = lst[2]
+        day = lst[3]
+
+        if(day in ['91']): #'23', '24'
+          junk=1
+        else:
+          if (surface in task_list or ("all" in task_list and surface!="joystick")) and ((month in months) or ("all" in months)):
+            directory_path = os.path.join(data_path, directory)
+
+            #only look at files, and not folders
+            dir_files = [x for x in os.listdir(directory_path) if not os.path.isdir(os.path.join(directory_path, x))]
+            #get the .obj files and sort them
+            dir_files = [x for x in dir_files if (os.path.splitext(x)[1] == ".obj")]
+            dir_files.sort()
+            
+            #check number of files
+            if (len(dir_files) % 3) != 0:
+              print("\n\n*************** ERROR: Something wacky in folder: ", directory_path)
+            
+            #save obj/robot/img .obj files from the full list of them
+            for i in range(int(len(dir_files)/3)):
+              if runs_per_surface[surface] < max_runs_per_surface:
+                image_file = dir_files[3*i]
+                mocap_file = dir_files[3*i +1]
+                robot_file = dir_files[3*i + 2]
+                num_training_rollouts+=1
+
+                if image_file[0] == mocap_file[0] == robot_file[0]:
+                  path_lsts[surface].append(os.path.join(directory_path, image_file))
+                  path_lsts[surface].append(os.path.join(directory_path, mocap_file))
+                  path_lsts[surface].append(os.path.join(directory_path, robot_file))
+                  runs_per_surface[surface] = runs_per_surface[surface] + 1
+                else: 
+                  print("\n\n************* ERROR w reading initial random data")
+                  IPython.embed()
+
+    ###########################
+    ##### ON-POLICY DATA ######
+    ###########################
+
+    else:
+
+      ######LOCATION OF ON-POLICY DATA
+      data_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all"
+      surface_types = ["turf", "carpet", "styrofoam"] #####, "gravel"] ####################### TO DO: we don't have gravel on-policy data yet
+
+      #######GET FILENAMES FROM THAT DIRECTORY
+      path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []} 
+      runs_per_surface = {"turf": 0, "carpet":0, "styrofoam":0, "gravel":0}
+      num_training_rollouts=0
+
+      for surface in surface_types:
+        directory_path = os.path.join(data_path, surface)
+        directory_path = os.path.join(directory_path, "saved_rollouts")
+        dirs = os.listdir(directory_path)
+
+        for directory in dirs:  
+          which_agg_iter = directory.split("_aggIter")[1]
+
+          if(which_agg_iter==str(agg_itr_counter-1)): ### READ IN DATA FROM THE PREVIOUS MODEL'S EXECUTION
+            #get the .obj files from this folder
+            image_file = 0
+            mocap_file = os.path.join(os.path.join(directory_path, directory), "mocapInfo.obj")
+            robot_file = os.path.join(os.path.join(directory_path, directory), "robotInfo.obj")
+            num_training_rollouts+=1
+
+            path_lsts[surface].append(image_file)
+            path_lsts[surface].append(mocap_file)
+            path_lsts[surface].append(robot_file)
+            runs_per_surface[surface] = runs_per_surface[surface] + 1
+
+    ###### LIST OF PATH LISTS, TO RETURN
+    list_of_pathLists = []
+    list_of_pathLists.append(path_lsts["turf"])
+    list_of_pathLists.append(path_lsts["carpet"])
+    list_of_pathLists.append(path_lsts["styrofoam"])
+    list_of_pathLists.append(path_lsts["gravel"])
+
+  #################################
+  ###### EXPERIMENT: OTHER ########
+  #################################
 
   else:
     print("\n\nNOT IMPLEMENTED: getting data (for experiment other than terrain_types)...")
     IPython.embed()
 
-  list_of_pathLists = []
+  ##################################
+  ########## PRINT INFO ############
+  ##################################
 
-  for k, v in path_lsts.items(): #### MAKE SURE YOU ALPHABETIZE THE KEYS HERE, Otherwise aGGREGATION WILL BE AWKWARD. Do the same thing for aggregation so the lists correspond
-    if len(v):
-      list_of_pathLists.append(v)
+  print()
+  print()
+  print("*********AGG ITER: ", agg_itr_counter)
+  print("*********num training rollouts: ", num_training_rollouts)
+  print("*********runs per surface: ", runs_per_surface)
+  print()
+  print()
 
   return list_of_pathLists, num_training_rollouts
 

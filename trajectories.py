@@ -83,6 +83,24 @@ def make_trajectory(shape, curr_state, x_index, y_index):
         my_list.append(np.array([curr_x+4, curr_y]))
         my_list.append(np.array([curr_x+4, curr_y]))
         my_list.append(np.array([curr_x+4, curr_y]))
+
+    if(shape=="uturn"):
+        my_list.append(np.array([curr_x, curr_y]))
+        my_list.append(np.array([curr_x+1.4, curr_y]))
+        my_list.append(np.array([curr_x+2.4, curr_y]))
+        my_list.append(np.array([curr_x+2.9, curr_y+0.35]))
+        my_list.append(np.array([curr_x+2.9, curr_y+1.4]))
+        my_list.append(np.array([curr_x+2.4, curr_y+1.7]))
+        my_list.append(np.array([curr_x+1.4, curr_y+1.7]))
+        my_list.append(np.array([curr_x+0.6, curr_y+1.7]))
+        my_list.append(np.array([curr_x+0, curr_y+1.7]))
+        my_list.append(np.array([curr_x-1, curr_y+1.7]))
+        my_list.append(np.array([curr_x-1.5, curr_y+1.7]))
+        my_list.append(np.array([curr_x-2, curr_y+1.7]))
+        my_list.append(np.array([curr_x-2, curr_y+1.7]))
+        my_list.append(np.array([curr_x-2, curr_y+1.7]))
+        my_list.append(np.array([curr_x-2, curr_y+1.7]))
+        my_list.append(np.array([curr_x-2, curr_y+1.7]))
         
     if(shape=='figure8'):
         pass

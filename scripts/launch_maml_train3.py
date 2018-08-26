@@ -32,46 +32,26 @@ from rllab.misc.instrument import run_experiment_lite
 from sandbox.ignasi.maml.utils import replace_in_dict
 from rllab.misc.instrument import VariantGenerator
 
-#####################################################################
-#####################################################################
 
-#TO DO
-	#add on policy data to the validation
 
 #BEFORE RUNNING
 	#source workspace
 	#source activate rllab3
 	#python launch_maml_train.py
 
-#MODELS USED RIGHT NOW FOR GBAC
-	#/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_epoch45
-	#/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_aggIter1_epoch45
-
-#####################################################################
-#####################################################################
-
 def run(d):
 
 	#restore old dynamics model
 	train_now = True
-		# IF TRUE saved the new training into "previous_dynamics_model"
 	restore_previous = False
-
 	# old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
 	# old_model_num = 0
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC/model_epoch45"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_epoch45"
-	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_aggIter1_epoch45"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Tuesday_optimization/carpet_on_carpet_2/model_epoch10"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/model_epoch45"
-	
-	desired_shape_for_rollout = "left"                     #straight, left, right, circle_left, zigzag, figure8
-	save_rollout_run_num = 2
-	rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
+	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Tuesday_optimization/carpet_on_carpet/model_epoch10"
 
-	num_steps_per_rollout= 135 ####135, 150 turf right... 80 for straight, 270 for multi_terrain uturn
-	if(desired_shape_for_rollout=="straight"):
-		num_steps_per_rollout= 80
+	num_steps_per_rollout= 140
+	desired_shape_for_rollout = "left"                     #straight, left, right, circle_left, zigzag, figure8
+	save_rollout_run_num = 0
+	rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
 	#settings
 	cheaty_training = False
@@ -99,7 +79,7 @@ def run(d):
 		noiseToSignal = 0.01
 
 	#datatypes
-	tf_datatype= tf.float32
+	tf_datatype= tf.float32 ############################# CHANGE BACK!
 	np_datatype= np.float32
 
 	#motor limits
@@ -121,9 +101,10 @@ def run(d):
 
 	#vars from config
 	config = d['config']
-	curr_agg_iter = config['aggregation']['curr_agg_iter']
-	#save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name'] 
-	save_dir = '/home/anagabandi/rllab-private/data/local/experiment/' + d['exp_name']
+	curr_agg_iter = d['curr_agg_iter']
+	save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name']
+	############################################################################################ CHANGE BACK! 
+	#save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name']
 
 	print("\n\nSAVING EVERYTHING TO: ", save_dir)
 
@@ -139,154 +120,66 @@ def run(d):
 
 	print("\n\nCURR AGGREGATION ITER: ", curr_agg_iter)
 	# Training data
-	# Random
 	dataX=[]
 	dataX_full=[] #this is just for your personal use for forwardsim (for debugging)
 	dataY=[]
 	dataZ=[]
 
-	# MPC
-	dataX_onPol=[]
-	dataX_full_onPol=[]
-	dataY_onPol=[]
-	dataZ_onPol=[]
-
 	# Validation data
-	# Random
 	dataX_val = []
 	dataX_full_val=[]
 	dataY_val=[]
 	dataZ_val=[]
 
-	# Validation data
-	# MPC
-	dataX_val_onPol = []
-	dataX_full_val_onPol=[]
-	dataY_val_onPol=[]
-	dataZ_val_onPol=[]
-
+	agg_itr = 0
 	training_ratio = config['training']['training_ratio']
-	for agg_itr_counter in range(curr_agg_iter+1):
+	for agg_itr in range(curr_agg_iter+1):
 		#getDataFromDisk should give (tasks, rollouts from that task, each rollout has its points)
-		dataX_curr, dataY_curr, dataZ_curr, dataX_curr_full = getDataFromDisk(config['experiment_type'], 
+		dataX_curr, dataY_curr, dataZ_curr, dataX_curr_full = getDataFromDisk(agg_itr, config['experiment_type'], 
 																			use_one_hot, use_camera, 
-																			cheaty_training, state_representation, agg_itr_counter, config_training=config['training'])
-		
-		#IPython.embed() # Did I make a horrible mistake?
-		#put random data into dataX, dataX_full, dataY, dataZ
-		if(agg_itr_counter==0):
-			for task_num in range(len(dataX_curr)):
-				taski_num_rollout = len(dataX_curr[task_num])
-				print("task" + str(task_num) + "_num_rollout: ", taski_num_rollout)
+																			cheaty_training, state_representation, config['training'])
+		if(agg_itr==0):
+			for i in range(len(dataX_curr)):
+				taski_num_rollout = len(dataX_curr[i])
+				print("taski_num_rollout: ", taski_num_rollout)
+				dataX.append(dataX_curr[0][:int(taski_num_rollout*training_ratio)])
 
-				dataX.append(dataX_curr[task_num][:int(taski_num_rollout*training_ratio)])
-				dataX_full.append(dataX_curr_full[task_num][:int(taski_num_rollout*training_ratio)])
-				dataY.append(dataY_curr[task_num][:int(taski_num_rollout*training_ratio)])
-				dataZ.append(dataZ_curr[task_num][:int(taski_num_rollout*training_ratio)])
+				dataX_full.append(dataX_curr_full[0][:int(taski_num_rollout*training_ratio)])
+				dataY.append(dataY_curr[0][:int(taski_num_rollout*training_ratio)])
+				dataZ.append(dataZ_curr[0][:int(taski_num_rollout*training_ratio)])
 
-				dataX_val.append(dataX_curr[task_num][int(taski_num_rollout*training_ratio):])
-				dataX_full_val.append(dataX_curr_full[task_num][int(taski_num_rollout*training_ratio):])
-				dataY_val.append(dataY_curr[task_num][int(taski_num_rollout*training_ratio):])
-				dataZ_val.append(dataZ_curr[task_num][int(taski_num_rollout*training_ratio):])
-		#put on-policy data into dataX_onPol, dataX_full_onPol, dataY_onPol, dataZ_onPol
-		#TO DO: validation for these
-		elif(agg_itr_counter==1):
-			for task_num in range(len(dataX_curr)):
-				taski_num_rollout = len(dataX_curr[task_num])
-				print("task" + str(task_num) + "_num_rollout for onpolicy: ", taski_num_rollout)
-
-				dataX_onPol.append(dataX_curr[task_num][:int(taski_num_rollout*training_ratio)])
-				dataX_full_onPol.append(dataX_curr_full[task_num][:int(taski_num_rollout*training_ratio)])
-				dataY_onPol.append(dataY_curr[task_num][:int(taski_num_rollout*training_ratio)])
-				dataZ_onPol.append(dataZ_curr[task_num][:int(taski_num_rollout*training_ratio)])
-
-				dataX_val_onPol.append(dataX_curr[task_num][int(taski_num_rollout*training_ratio):])
-				dataX_full_val_onPol.append(dataX_curr_full[task_num][int(taski_num_rollout*training_ratio):])
-				dataY_val_onPol.append(dataY_curr[task_num][int(taski_num_rollout*training_ratio):])
-				dataZ_val_onPol.append(dataZ_curr[task_num][int(taski_num_rollout*training_ratio):])
+				dataX_val.append(dataX_curr[0][int(taski_num_rollout*training_ratio):])
+				dataX_full_val.append(dataX_curr_full[0][int(taski_num_rollout*training_ratio):])
+				dataY_val.append(dataY_curr[0][int(taski_num_rollout*training_ratio):])
+				dataZ_val.append(dataZ_curr[0][int(taski_num_rollout*training_ratio):])
+			#IPython.embed()
 		else:
-			for task_num in range(len(dataX_curr)):
-				taski_num_rollout = len(dataX_curr[task_num])
-				print("task" + str(task_num) + "_num_rollout for onpolicy: ", taski_num_rollout)
+			#combine these rollouts w previous rollouts, so everything is still organized by task
+			for task_num in range(len(dataX)):
+				for rollout_num in range(len(dataX_curr[task_num])):
+					dataX[task_num].append(dataX_curr[task_num][rollout_num])
+					dataY[task_num].append(dataY_curr[task_num][rollout_num])
+					dataZ[task_num].append(dataZ_curr[task_num][rollout_num])
+					dataX_full[task_num].append(dataX_curr_full[task_num][rollout_num])
+			# Do validation for this too! 
 
-				dataX_onPol[task_num].extend(dataX_curr[task_num][:int(taski_num_rollout*training_ratio)])
-				dataX_full_onPol[task_num].extend(dataX_curr_full[task_num][:int(taski_num_rollout*training_ratio)])
-				dataY_onPol[task_num].extend(dataY_curr[task_num][:int(taski_num_rollout*training_ratio)])
-				dataZ_onPol[task_num].extend(dataZ_curr[task_num][:int(taski_num_rollout*training_ratio)])
+	total_num_data = len(dataX)*len(dataX[0])*len(dataX[0][0]) # numSteps = tasks * rollouts * steps
+	print("\n\nTotal number of data points: ", total_num_data)
 
-				dataX_val_onPol[task_num].extend(dataX_curr[task_num][int(taski_num_rollout*training_ratio):])
-				dataX_full_val_onPol[task_num].extend(dataX_curr_full[task_num][int(taski_num_rollout*training_ratio):])
-				dataY_val_onPol[task_num].extend(dataY_curr[task_num][int(taski_num_rollout*training_ratio):])
-				dataZ_val_onPol[task_num].extend(dataZ_curr[task_num][int(taski_num_rollout*training_ratio):])
-
-
-		#IPython.embed() #check that everything was made properly, and no duplicates
-	#IPython.embed()
-
-	total_random_data = len(dataX)*len(dataX[0])*len(dataX[0][0]) # numSteps = tasks * rollouts * steps
-	if(len(dataX_onPol)==0):
-		total_onPol_data=0
-	else:
-		total_onPol_data = len(dataX_onPol)*len(dataX_onPol[0])*len(dataX_onPol[0][0]) 
-	total_num_data = total_random_data +  total_onPol_data
-	print()
-	print()
-	print("Number of random data points: ", total_random_data)
-	print("Number of on-policy data points: ", total_onPol_data)
-	print("TOTAL number of data points: ", total_num_data)
-
-	#IPython.embed()
-	#combine them into a dataset
-	ratio_new = 0.9
-	num_new_pts = ratio_new*(total_random_data)/(1.0-ratio_new)
-	if(len(dataX_onPol)==0):
-		num_times_to_copy_onPol=0
-	else:
-		num_times_to_copy_onPol = int(num_new_pts/total_onPol_data)
-	for i in range(num_times_to_copy_onPol):
-		for task_num in range(len(dataX_onPol)):
-			for rollout_num in range(len(dataX_onPol[task_num])):
-				dataX[task_num].append(dataX_onPol[task_num][rollout_num])
-				dataX_full[task_num].append(dataX_full_onPol[task_num][rollout_num])
-				dataY[task_num].append(dataY_onPol[task_num][rollout_num])
-				dataZ[task_num].append(dataZ_onPol[task_num][rollout_num])
-	print("num_times_to_copy_onPol: ", num_times_to_copy_onPol)
-
-	#make a list of all X,Y,Z so can take mean of them
-	all_points_inp=[]
-	all_points_outp=[]
-	for task_num in range(len(dataX)):
-		for rollout_num in range(len(dataX[task_num])):
-			input_pts = np.concatenate((dataX[task_num][rollout_num], dataY[task_num][rollout_num]), axis=1)
-			output_pts = dataZ[task_num][rollout_num]
-
-			all_points_inp.append(input_pts)
-			all_points_outp.append(output_pts)
-	all_points_inp=np.concatenate(all_points_inp)
-	all_points_outp=np.concatenate(all_points_outp)
-
+	#return
 	## concatenate state and action --> inputs
 	outputs = copy.deepcopy(dataZ)
 	inputs = copy.deepcopy(dataX)
+
+	#IPython.embed()
+	inputs_val = np.append(np.array(dataX_val), np.array(dataY_val), axis = 3)
+	outputs_val = np.array(dataZ_val)
+	#IPython.embed() # check shapes
 	for task_num in range(len(dataX)):
 		for rollout_num in range (len(dataX[task_num])):
 			#dataX[task_num][rollout_num] (steps x s_dim)
 			#dataY[task_num][rollout_num] (steps x a_dim)
 			inputs[task_num][rollout_num] = np.concatenate([dataX[task_num][rollout_num], dataY[task_num][rollout_num]], axis=1)
-
-	#for validation
-	inputs_val = np.append(np.array(dataX_val), np.array(dataY_val), axis = 3)
-	outputs_val = np.array(dataZ_val)
-
-	#IPython.embed()
-	if curr_agg_iter ==0:
-		inputs_val_onPol = []
-		outputs_val_onPol = []
-	else:
-		inputs_val_onPol = np.append(np.array(dataX_val_onPol[:3]), np.array(dataY_val_onPol[:3]), axis = 3)
-		outputs_val_onPol = np.array(dataZ_val_onPol[:3])
-	#IPython.embed()
-
 	
 	#inputs should now be (tasks, rollouts from that task, [s,a])
 	#outputs should now be (tasks, rollouts from that task, [ds])
@@ -299,7 +192,7 @@ def run(d):
 	print("outputs of NN: ", outputSize)
 
 	#calc mean/std on full dataset
-	'''if config["model"]["nonlinearity"] == "tanh":
+	if config["model"]["nonlinearity"] == "tanh":
 		# Do you scale inputs to [-1, 1] and then standardize outputs?
 		#IPython.embed()
 		inputs_array = np.array(inputs)
@@ -332,12 +225,7 @@ def run(d):
 		mean_inp = np.expand_dims(np.mean(inputs,axis=(0,1,2)), axis=0)
 		std_inp = np.expand_dims(np.std(inputs,axis=(0,1,2)), axis=0)
 		mean_outp = np.expand_dims(np.mean(outputs,axis=(0,1,2)), axis=0)
-		std_outp = np.expand_dims(np.std(outputs,axis=(0,1,2)), axis=0)'''
-
-	mean_inp = np.expand_dims(np.mean(all_points_inp, axis=0), axis=0)
-	std_inp = np.expand_dims(np.std(all_points_inp, axis=0), axis=0)
-	mean_outp = np.expand_dims(np.mean(all_points_outp, axis=0), axis=0)
-	std_outp = np.expand_dims(np.std(all_points_outp, axis=0), axis=0)
+		std_outp = np.expand_dims(np.std(outputs,axis=(0,1,2)), axis=0)
 	print("\n\nCalulated means and stds... ", mean_inp.shape, std_inp.shape, mean_outp.shape, std_outp.shape, "\n\n")
 
 	###########################################################
@@ -365,7 +253,7 @@ def run(d):
 
 	# GPU config proto
 	gpu_device = 0
-	gpu_frac = 0.5 #0.8 #0.3
+	gpu_frac = 0.3 #0.3
 	os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_device)
 	gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=gpu_frac)
 	config_2 = tf.ConfigProto(gpu_options=gpu_options,
@@ -382,7 +270,7 @@ def run(d):
 	tf.train.start_queue_runners()
 
 	# set the mean/std of regressor according to mean/std of the data we have so far
-	regressor.update_params_data_dist(mean_inp, std_inp, mean_outp, std_outp, total_num_data)
+	regressor.update_params_data_dist(mean_inp, std_inp, mean_outp, std_outp, len(inputs[0])*len(inputs[0][0])*4)
 
 	###########################################################
 	## TRAIN THE DYNAMICS MODEL
@@ -399,21 +287,15 @@ def run(d):
      		with open(osp.join(osp.dirname(previous_dynamics_model), "weights.pickle"), "wb") as output_file:
         		pickle.dump(weights, output_file)"""
 		#IPython.embed()
-		np.save(save_dir + "/inputs.npy", inputs)
-		np.save(save_dir + "/outputs.npy", outputs)
+		# np.save(save_dir + "/inputs.npy", inputs)
+		# np.save(save_dir + "/outputs.npy", outputs)
 		# # mean_inp.shape, std_inp.shape, mean_outp.shape, std_outp.shape
 		# np.save(save_dir + "/mean_inp.npy", mean_inp)
 		# np.save(save_dir + "/std_inp.npy", std_inp)
 		# np.save(save_dir + "/mean_outp.npy", mean_outp)
 		# np.save(save_dir + "/std_outp.npy", std_outp)
 		
-		# REMOVE AFTER 3 PM TODAY
-
-		trainable_vars = sess.run(tf.trainable_variables())
-		#IPython.embed()
-		pickle.dump(trainable_vars, open(osp.join(save_dir, 'weight_restore_in_launch.yaml'), 'w'))
-
-		train(inputs, outputs, curr_agg_iter, model, saver, sess, config, inputs_val, outputs_val, inputs_val_onPol, outputs_val_onPol, save_path=previous_dynamics_model)
+		train(inputs, outputs, curr_agg_iter, model, saver, sess, config, inputs_val, outputs_val)
 	else: 
 		print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
 		saver.restore(sess, previous_dynamics_model)
@@ -431,12 +313,12 @@ def run(d):
 	#create controller node
 	controller_node = GBAC_Controller(sess=sess, policy=policy, model=model,
 									state_representation=state_representation, use_pid_mode=use_pid_mode, 
-									default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], num_updates=config['training']['num_updates'], **config['roach'])
+									default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], **config['roach'])
 
 	#do 1 rollout
 	print("\n\n\nPAUSING... right before a controller run... RESET THE ROBOT TO A GOOD LOCATION BEFORE CONTINUING...")
 	#IPython.embed()
-	resulting_x, selected_u, desired_seq, list_robot_info, list_mocap_info, old_saving_format_dict, list_best_action_sequences = controller_node.run(num_steps_per_rollout, desired_shape_for_rollout)
+	resulting_x, selected_u, desired_seq, list_robot_info, list_mocap_info, old_saving_format_dict = controller_node.run(num_steps_per_rollout, desired_shape_for_rollout)
 	
 	#where to save this rollout
 	pathStartName = save_dir + '/saved_rollouts/'+rollout_save_filename+ '_aggIter' +str(curr_agg_iter)
@@ -452,7 +334,6 @@ def run(d):
 	np.save(pathStartName + '/oldFormat_movedtonext.npy', old_saving_format_dict['save_moved_to_next'])
 	np.save(pathStartName + '/oldFormat_desheading.npy', old_saving_format_dict['save_desired_heading'])
 	np.save(pathStartName + '/oldFormat_currheading.npy', old_saving_format_dict['save_curr_heading'])
-	np.save(pathStartName + '/list_best_action_sequences.npy', list_best_action_sequences)
 
 	yaml.dump(config, open(osp.join(pathStartName, 'saved_config.yaml'), 'w'))
 
@@ -482,41 +363,45 @@ def main(config_path, extra_config):
 	vg = VariantGenerator()
 	vg.add('config', [config])
 	##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-
-	#training vars
 	vg.add('meta_batch_size', [64]) #1300 #################
 	vg.add('meta_lr', [0.001])
-	vg.add('update_batch_size', [8]) #############
-	vg.add('update_lr', [1.0]) #[3.0, 4.0, 6.0, 7.0] ############ 2 for the adaptation model, 0 for the NON_GBAC one
-	vg.add('num_updates', [5]) #
-	vg.add('max_epochs', [30])
 
-	#don't really change
+	vg.add('update_batch_size', [16]) #############
+	vg.add('update_lr', [1.0]) #[1.0, 0.1, 0.01, 0.001]
+	vg.add('num_updates', [3]) #
+
+	vg.add('max_epochs', [50])
 	vg.add('horizon', [5])
+	
+	vg.add('curr_agg_iter', [0])
+	#vg.add('use_reg', [True, False]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
 	vg.add('seed', [0]) 
 	vg.add('nonlinearity', ['relu'])
 	if config['training']['use_reg']:
-		vg.add('regularization_weight', [0.002]) #no reg for carp on carp: 0.000000001
+		vg.add('regularization_weight', [0.000000001]) #no reg for carp on carp: 0.000000001
+
 	vg.add('use_clip', [True])
 	vg.add("weight_initializer", ["truncated_normal"])
-	vg.add("dim_hidden", [[500, 500]])
-
-	#the data that gets read in
+	vg.add("dim_hidden", [[800], [800, 800]])
 	vg.add("task_list", [["all"]])
-	vg.add('max_runs_per_surface', [396]) #396, 5
-	vg.add('curr_agg_iter', [0])
 
+	#vg.add('max_runs_per_surface', [5])
 
+	#vg.add('backward_discouragement', [10, 11])
+	#IPython.embed()
 	##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
 	for v in vg.variants():
 
 		time.sleep(1.)
+		#IPython.embed()
 
 		_v = v.copy(); del _v['config'], _v['_hidden_keys']
 		v['config'] = replace_in_dict(v['config'], _v)
 
+		#IPython.embed()
 		#v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']]) 
+
 
 		#v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + '__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
 		# v['exp_name'] = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_all_terrain_mbs_" + str(v['config']['training']['meta_batch_size']) + "_ubs_" + str(v['config']['training']['update_batch_size']) + "NON_GBAC"
@@ -529,22 +414,8 @@ def main(config_path, extra_config):
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates_2/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) +"_ubs_" + str(v['config']['training']['update_batch_size']) +"_reg_weight_" + str(v['config']['training']['regularization_weight'])
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/averaging_debug"
 		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']])
-
-		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
-		
-		#num updates 2
-		#v['exp_name'] = "MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/styrofoam"
-		
-		#non-gbac model
-		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/NON_GBAC/multi_terrain_2"
-		
-		#gbac model
-		v['exp_name'] = "MAML_roach/Saturday_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
-		#v['exp_name'] = "MAML_roach/Saturday_optimization/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all"
-		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/styrofoam"
-		
-		#v['exp_name'] = "/MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/styrofoam"
-		#v['exp_name'] = "MAML_roach/Thursday_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
+		#IPython.embed()
+		v['exp_name'] = "MAML_roach_copy/Tuesday_night_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0])
 		
 		run_experiment_lite(
 			run,

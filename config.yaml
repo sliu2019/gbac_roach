@@ -2,7 +2,6 @@
 seed: 0
 
 experiment_type: 'terrain_types'                      # Name of the task
-curr_agg_iter: 0
 
 training:
     meta_batch_size: 250                   # Number of tasks sampled per meta-update
@@ -25,9 +24,9 @@ training:
     weight_initializer: "xavier"        # "xavier" or "truncated_normal"
 
 aggregation:
-    agg_itr: 0                          # Choose 0 for no aggregation, 1 for 1 iteration (?)
-    agg_datapaths:                      # List of saved_rollout folders from on-policy runs
-        -"/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/carpet/saved_rollouts"
+    curr_agg_iter: 0                    # which aggregation iteration you're on (model0 results in runs0, then on iter 1 you load in runs0 to train model1 and then execute it to get runs1)
+    #agg_datapaths:                      # List of saved_rollout folders from on-policy runs
+    #    -"/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/carpet/saved_rollouts"
 
 roach:
     frequency_value: 10

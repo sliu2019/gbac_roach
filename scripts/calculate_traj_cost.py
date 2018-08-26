@@ -16,23 +16,23 @@ def main():
 	#rollouts_path = '/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16/saved_rollouts'
 	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16_NON_GBAC/saved_rollouts"
 	#rollouts_path = "/home/anagabandi/roach_workspace/src/nn_dynamics_roach/run_36"
-	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/foam_fixed_leg/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC/foam/saved_rollouts"
+	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/styrofoam/saved_rollouts"
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC/multi_terrain_2/saved_rollouts"
 
 	#traj_save_path = ['zigzag0', 'zigzag1', 'zigzag2', 'zigzag3', 'zigzag4']
 	#traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0', 'left3_aggIter0', 'left4_aggIter0']
-	traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0','left3_aggIter0', 'left4_aggIter0']
+	#traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0','left3_aggIter0', 'left4_aggIter0']
 	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0', 'straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0']
 	#traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0','right3_aggIter0', 'right4_aggIter0']
 	#traj_save_path = ['left7_aggIter0','left8_aggIter0', 'left9_aggIter0']
 	#traj_save_path = ['right0_aggIter0','right1_aggIter0']
-	#'right2_aggIter0','right3_aggIter0', 'right4_aggIter0', 'right5_aggIter0', 'right6_aggIter0', 'right7_aggIter0','right9_aggIter0']
-	#traj_save_path = ['right3_aggIter0', 'right4_aggIter0', 'right5_aggIter0', 'right6_aggIter0', 'right7_aggIter0']
-	#traj_save_path = ['left0', 'left1', 'left2', 'left3', 'left4']
-	#traj_save_path = ['right0', 'right1', 'right2', 'right3', 'right4']
-
-
 	
+	#traj_save_path=['straight0_aggIter1','straight1_aggIter1', 'straight2_aggIter1', 'straight3_aggIter1', 'straight4_aggIter1']
+	traj_save_path = ['left0_aggIter1','left1_aggIter1', 'left2_aggIter1', 'left3_aggIter1', 'left4_aggIter1']
+	#traj_save_path = ['right0_aggIter1','right1_aggIter1', 'right2_aggIter1','right3_aggIter1', 'right4_aggIter1']
+
+	#traj_save_path = ['uturn0_aggIter0','uturn1_aggIter0','uturn2_aggIter0']
+	#traj_save_path = ['uturn0_aggIter0']
 
 	################################################################
 	################################################################
@@ -104,7 +104,7 @@ def main():
 			plt.plot(desired_states[:5,0], desired_states[:5,1], 'ro')
 		plt.plot(traj_taken[:,0], traj_taken[:,1])
 		plt.savefig(rollouts_path + "/" + traj_path + "/x_y_visualization.png")
-		plt.show()
+		#plt.show()
 		plt.clf()
 
 	print()

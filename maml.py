@@ -114,7 +114,7 @@ class MAML:
                 task_outputbs.append(output)
 
                 # calculate loss(f_weights{1}(inputb))
-                task_lossesb.append(self.loss_func(output, labelb))
+                task_lossesb.append(self.loss_func(output, labelb)/float(self.k))
 
                 trainable_vars = tf.trainable_variables()
                 non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
@@ -141,7 +141,7 @@ class MAML:
                     output = self.forward(inputb, fast_weights, reuse=True, meta_loss=False)
 
                     task_outputbs.append(output)
-                    task_lossesb.append(self.loss_func(output, labelb))
+                    task_lossesb.append(self.loss_func(output, labelb)/float(self.k))
 
                     trainable_vars = tf.trainable_variables()
                     non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
