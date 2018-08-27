@@ -140,6 +140,8 @@ def whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr_counter
   print()
   print()
 
+  #IPython.embed()
+
   return list_of_pathLists, num_training_rollouts
 
 #each output of this should be
@@ -193,6 +195,7 @@ def getData(list_of_pathLists, num_training_rollouts, use_one_hot, use_camera, c
     dataY.append(dataY_curr)
     dataZ.append(dataZ_curr)
   
+  #IPython.embed()
   return dataX, dataY, dataZ, dataX_full
 
 def quat_to_eulerDegrees(orientation):

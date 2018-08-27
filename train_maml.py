@@ -27,7 +27,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   t0 = time.time()
   prelosses, postlosses,vallosses, vallosses_onPol, metatrain_losses_withReg, metatrain_losses = [], [], [], [], [], []
   multitask_weights, reg_weights = [], []
-  total_points_per_task = len(inputs_full[0])*len(inputs_full[0][0]) #numRollouts * pointsPerRollout
+  total_points_per_task = len(inputs_full[1])*len(inputs_full[1][0]) #numRollouts * pointsPerRollout
   
   all_indices = []
   for taski in range(len(inputs_full)):
@@ -147,15 +147,23 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     ################################
     # Random
     # Want to keep ts constant across rollouts
-    inputa = inputs_full_val[:, :, :update_bs] # Err ... it's on the same data everytime. WHich should be the case, no? 
-    inputb = inputs_full_val[:, :, update_bs:2*update_bs]
-    labela = outputs_full_val[:, :, :update_bs]
-    labelb = outputs_full_val[:, :, update_bs:2*update_bs]
+    inputa = []
+    inputb = []
+    labela = []
+    labelb = []
 
-    inputa = np.concatenate([inputa[i] for i in range(len(inputa))])
-    inputb = np.concatenate([inputb[i] for i in range(len(inputb))])
-    labela = np.concatenate([labela[i] for i in range(len(labela))])
-    labelb = np.concatenate([labelb[i] for i in range(len(labelb))])
+    for task_num in range(len(inputs_full_val)):
+      for rollout_num in range(len(inputs_full_val[task_num])):
+        inputa.append(inputs_full_val[task_num][rollout_num][:update_bs])
+        inputb.append(inputs_full_val[task_num][rollout_num][update_bs:2*update_bs])
+        labela.append(outputs_full_val[task_num][rollout_num][:update_bs])
+        labelb.append(outputs_full_val[task_num][rollout_num][update_bs:2*update_bs])
+
+    #IPython.embed()
+    inputa = np.array(inputa)
+    inputb = np.array(inputb)
+    labela = np.array(labela)
+    labelb = np.array(labelb)
 
     feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
     val_loss = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)

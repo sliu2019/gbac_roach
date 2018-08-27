@@ -53,20 +53,16 @@ from rllab.misc.instrument import VariantGenerator
 def run(d):
 
 	#restore old dynamics model
-	train_now = True
+	train_now = False
 		# IF TRUE saved the new training into "previous_dynamics_model"
-	restore_previous = False
+	restore_previous = True
 
-	# old_exp_name = 'MAML_roach/terrain_types_turf_model_on_turf'
-	# old_model_num = 0
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC/model_epoch45"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_epoch45"
-	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/model_aggIter1_epoch45"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Tuesday_optimization/carpet_on_carpet_2/model_epoch10"
-	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/model_epoch45"
-	
+	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Sunday_optimization/_ubs_8_ulr_0.0num_updates1_layers_1_x100_task_list_carpet_mlr_0.001/model_aggIter0_epoch20"
+	previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Sunday_optimization/_ubs_8_ulr_0.01num_updates3_layers_1_x100_task_list_all_mlr_0.001/model_aggIter0_epoch40"
+	#previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Sunday_optimization/NON_GBAC/model_aggIter0_epoch30"
+
 	desired_shape_for_rollout = "left"                     #straight, left, right, circle_left, zigzag, figure8
-	save_rollout_run_num = 2
+	save_rollout_run_num = 8
 	rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
 
 	num_steps_per_rollout= 135 ####135, 150 turf right... 80 for straight, 270 for multi_terrain uturn
@@ -223,7 +219,7 @@ def run(d):
 		#IPython.embed() #check that everything was made properly, and no duplicates
 	#IPython.embed()
 
-	total_random_data = len(dataX)*len(dataX[0])*len(dataX[0][0]) # numSteps = tasks * rollouts * steps
+	total_random_data = len(dataX)*len(dataX[1])*len(dataX[1][0]) # numSteps = tasks * rollouts * steps
 	if(len(dataX_onPol)==0):
 		total_onPol_data=0
 	else:
@@ -275,8 +271,14 @@ def run(d):
 			inputs[task_num][rollout_num] = np.concatenate([dataX[task_num][rollout_num], dataY[task_num][rollout_num]], axis=1)
 
 	#for validation
-	inputs_val = np.append(np.array(dataX_val), np.array(dataY_val), axis = 3)
-	outputs_val = np.array(dataZ_val)
+	outputs_val = copy.deepcopy(dataZ_val)
+	inputs_val = copy.deepcopy(dataX_val)
+	for task_num in range(len(dataX_val)):
+		for rollout_num in range (len(dataX_val[task_num])):
+			#dataX[task_num][rollout_num] (steps x s_dim)
+			#dataY[task_num][rollout_num] (steps x a_dim)
+			inputs_val[task_num][rollout_num] = np.concatenate([dataX_val[task_num][rollout_num], dataY_val[task_num][rollout_num]], axis=1)
+			#IPython.embed()
 
 	#IPython.embed()
 	if curr_agg_iter ==0:
@@ -290,11 +292,12 @@ def run(d):
 	
 	#inputs should now be (tasks, rollouts from that task, [s,a])
 	#outputs should now be (tasks, rollouts from that task, [ds])
-	inputSize = inputs[0][0].shape[1]
-	outputSize = outputs[0][0].shape[1]
+
+	inputSize = inputs[1][0].shape[1]
+	outputSize = outputs[1][0].shape[1]
 	print("\n\nDimensions:")
-	print("states: ", dataX[0][0].shape[1])
-	print("actions: ", dataY[0][0].shape[1])
+	print("states: ", dataX[1][0].shape[1])
+	print("actions: ", dataY[1][0].shape[1])
 	print("inputs to NN: ", inputSize)
 	print("outputs of NN: ", outputSize)
 
@@ -418,9 +421,9 @@ def run(d):
 		print("\n\nRESTORING A DYNAMICS MODEL FROM ", previous_dynamics_model)
 		saver.restore(sess, previous_dynamics_model)
 		#IPython.embed()
-	return
+	#return
 	#IPython.embed()
-	predicted_traj = regressor.do_forward_sim(dataX_full[0][0][27:45], dataY[0][0][27:45], state_representation)
+	#predicted_traj = regressor.do_forward_sim(dataX_full[0][0][27:45], dataY[0][0][27:45], state_representation)
 	#np.save(save_dir + '/forwardsim_true.npy', dataX_full[0][7][27:45])
 	#np.save(save_dir + '/forwardsim_pred.npy', predicted_traj)
 
@@ -485,11 +488,11 @@ def main(config_path, extra_config):
 
 	#training vars
 	vg.add('meta_batch_size', [64]) #1300 #################
-	vg.add('meta_lr', [0.001])
+	vg.add('meta_lr', [0.001]) #usually 0.001
 	vg.add('update_batch_size', [8]) #############
-	vg.add('update_lr', [1.0]) #[3.0, 4.0, 6.0, 7.0] ############ 2 for the adaptation model, 0 for the NON_GBAC one
-	vg.add('num_updates', [5]) #
-	vg.add('max_epochs', [30])
+	vg.add('update_lr', [2.0]) #[3.0, 4.0, 6.0, 7.0] ############ 2 for the adaptation model, 0 for the NON_GBAC one
+	vg.add('num_updates', [1]) #
+	vg.add('max_epochs', [50])
 
 	#don't really change
 	vg.add('horizon', [5])
@@ -500,7 +503,7 @@ def main(config_path, extra_config):
 		vg.add('regularization_weight', [0.002]) #no reg for carp on carp: 0.000000001
 	vg.add('use_clip', [True])
 	vg.add("weight_initializer", ["truncated_normal"])
-	vg.add("dim_hidden", [[500, 500]])
+	vg.add("dim_hidden", [[100]])
 
 	#the data that gets read in
 	vg.add("task_list", [["all"]])
@@ -518,33 +521,13 @@ def main(config_path, extra_config):
 
 		#v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']]) 
 
-		#v['exp_name'] = exp_name = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + '__max_epochs_5__meta_batch_size_40__batch_size_2000__update_batch_size_20__horizon_5'
-		# v['exp_name'] = v['config']['logging']['log_dir'] + v['config']['experiment_type'] + "_all_terrain_mbs_" + str(v['config']['training']['meta_batch_size']) + "_ubs_" + str(v['config']['training']['update_batch_size']) + "NON_GBAC"
-		# if v['config']['training']['use_reg']:
-		#     v['exp_name'] = v['exp_name'] + "_reg_" + str(v['config']['training']['regularization_weight'])
-		#v['exp_name'] = "MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16"
-
-		#v['exp_name'] = "MAML_roach/thorough_debug/" + "ulr_" + str(v['config']['training']['update_lr']) + "_use_reg_" + str(v['config']['training']['use_reg']) + "_use_clip_" +str(v['config']['training']['use_clip']) + "_use_clf_" + str(v['config']['training']['use_clf']) + "_nonx_001"
-		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/all_terrains_with_carpet_on_carpet_params_except_lr_" + str(v['config']['training']['update_lr'])
-		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/num_updates_2/num_updates_"+ str(v['config']['training']['num_updates'])+"_lr_ " + str(v['config']['training']['update_lr']) +"_ubs_" + str(v['config']['training']['update_batch_size']) +"_reg_weight_" + str(v['config']['training']['regularization_weight'])
-		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/averaging_debug"
-		#v['exp_name'] = "MAML_roach_copy/Tuesday_optimization/" + '__'.join([v['config']['experiment_type']] + [key + '_' + str(val) for key,val in _v.items() if key not in ['name', 'experiment_type', 'dim_hidden']])
-
-		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
-		
-		#num updates 2
-		#v['exp_name'] = "MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/styrofoam"
-		
-		#non-gbac model
-		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/NON_GBAC/multi_terrain_2"
-		
 		#gbac model
-		v['exp_name'] = "MAML_roach/Saturday_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
+		v['exp_name'] = "MAML_roach/Sunday_optimization/_ubs_8_ulr_0.01num_updates3_layers_1_x100_task_list_all_mlr_0.001/styrofoam"
+		#v['exp_name'] = "MAML_roach/Sunday_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list']) + "_mlr_" + str(v['config']['training']['meta_lr'])
 		#v['exp_name'] = "MAML_roach/Saturday_optimization/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all"
 		#v['exp_name'] = "MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/styrofoam"
-		
-		#v['exp_name'] = "/MAML_roach/Thursday_optimization/_ubs_8_ulr_0.5num_updates2_layers_1_x100_task_list_all/styrofoam"
-		#v['exp_name'] = "MAML_roach/Thursday_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list'])
+		#v['exp_name'] = "MAML_roach/Saturday_optimization/NON_GBAC_carpet_only/carpet"
+		#v['exp_name'] = "MAML_roach/Sunday_optimization/NON_GBAC/styrofoam"
 		
 		run_experiment_lite(
 			run,

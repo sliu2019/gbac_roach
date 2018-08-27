@@ -13,10 +13,9 @@ def main():
 	is_diffDrive = False
 
 	#run_1: gravel model on gravel
-	#rollouts_path = '/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16/saved_rollouts'
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/terrain_types__regularization_weight_0.001__use_reg_True__meta_batch_size_250__meta_lr_0.001__horizon_5__max_epochs_80__update_lr_0.1__curr_agg_iter_0__update_batch_size_16_NON_GBAC/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/roach_workspace/src/nn_dynamics_roach/run_36"
-	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/styrofoam/saved_rollouts"
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/styrofoam/saved_rollouts"
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Sunday_optimization/NON_GBAC/styrofoam/saved_rollouts"
+	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Sunday_optimization/_ubs_8_ulr_0.01num_updates3_layers_1_x100_task_list_all_mlr_0.001/styrofoam/saved_rollouts"
 	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/NON_GBAC/multi_terrain_2/saved_rollouts"
 
 	#traj_save_path = ['zigzag0', 'zigzag1', 'zigzag2', 'zigzag3', 'zigzag4']
@@ -28,8 +27,8 @@ def main():
 	#traj_save_path = ['right0_aggIter0','right1_aggIter0']
 	
 	#traj_save_path=['straight0_aggIter1','straight1_aggIter1', 'straight2_aggIter1', 'straight3_aggIter1', 'straight4_aggIter1']
-	traj_save_path = ['left0_aggIter1','left1_aggIter1', 'left2_aggIter1', 'left3_aggIter1', 'left4_aggIter1']
-	#traj_save_path = ['right0_aggIter1','right1_aggIter1', 'right2_aggIter1','right3_aggIter1', 'right4_aggIter1']
+	#traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0', 'left3_aggIter0']
+	traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0']
 
 	#traj_save_path = ['uturn0_aggIter0','uturn1_aggIter0','uturn2_aggIter0']
 	#traj_save_path = ['uturn0_aggIter0']

@@ -91,7 +91,7 @@ class MAML:
                     task_outputa = self.forward(inputa[i*self.k:(i+1)*self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
                         
                     # calculate loss(f_weights{0}(inputa))
-                    task_lossa = self.loss_func(task_outputa, labela[i*self.k:(i+1)*self.k])/float(self.k) 
+                    task_lossa = self.loss_func(task_outputa, labela[i*self.k:(i+1)*self.k]) 
 
                     # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                     grads = tf.gradients(task_lossa, list(fast_weights.values()))
@@ -114,7 +114,7 @@ class MAML:
                 task_outputbs.append(output)
 
                 # calculate loss(f_weights{1}(inputb))
-                task_lossesb.append(self.loss_func(output, labelb)/float(self.k))
+                task_lossesb.append(self.loss_func(output, labelb))
 
                 trainable_vars = tf.trainable_variables()
                 non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
@@ -124,7 +124,7 @@ class MAML:
                 # if taking more inner-update gradient steps
                 for j in range(num_updates - 1):
                     for i in range(self.multi_updates):
-                        loss = self.loss_func(self.forward(inputa[i * self.k:(i + 1) * self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i * self.k:(i + 1) * self.k])/float(self.k)  # only reuse on the first iter
+                        loss = self.loss_func(self.forward(inputa[i * self.k:(i + 1) * self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i * self.k:(i + 1) * self.k]) # only reuse on the first iter
 
                         # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                         grads = tf.gradients(loss, list(fast_weights.values()))
@@ -141,7 +141,7 @@ class MAML:
                     output = self.forward(inputb, fast_weights, reuse=True, meta_loss=False)
 
                     task_outputbs.append(output)
-                    task_lossesb.append(self.loss_func(output, labelb)/float(self.k))
+                    task_lossesb.append(self.loss_func(output, labelb))
 
                     trainable_vars = tf.trainable_variables()
                     non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]

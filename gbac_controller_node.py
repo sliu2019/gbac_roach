@@ -237,37 +237,37 @@ class GBAC_Controller(object):
             ########################
 
             # get the past K points (s,a,ds)
-            length= len(self.traj_taken)
-            K = self.update_batch_size
-            if(length>K):
-                i= length-1-K
-                list_of_s=[]
-                list_of_a=[]
-                list_of_ds=[]
-                while(i<(length-1)):
-                    list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
-                    list_of_a.append(self.actions_taken[i])
-                    list_of_ds.append(self.traj_taken[i+1]-self.traj_taken[i])
-                    i+=1
-                list_of_s= np.array(list_of_s)
-                list_of_a= np.array(list_of_a)
-                list_of_ds= np.array(list_of_ds)
+            # length= len(self.traj_taken)
+            # K = self.update_batch_size
+            # if(length>K):
+            #     i= length-1-K
+            #     list_of_s=[]
+            #     list_of_a=[]
+            #     list_of_ds=[]
+            #     while(i<(length-1)):
+            #         list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
+            #         list_of_a.append(self.actions_taken[i])
+            #         list_of_ds.append(self.traj_taken[i+1]-self.traj_taken[i])
+            #         i+=1
+            #     list_of_s= np.array(list_of_s)
+            #     list_of_a= np.array(list_of_a)
+            #     list_of_ds= np.array(list_of_ds)
 
-                #to do: speed this section up by doing fewer conversions/list-making
-                # Couldn't you use numpy and vector operations to parallelize
+            #     #to do: speed this section up by doing fewer conversions/list-making
+            #     # Couldn't you use numpy and vector operations to parallelize
 
-                #organize the points into what the regressor wants
-                k_labels = (list_of_ds).reshape(1, K, -1)
-                k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
-                feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
+            #     #organize the points into what the regressor wants
+            #     k_labels = (list_of_ds).reshape(1, K, -1)
+            #     k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
+            #     feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
 
-                #reset weights of regressor to theta*
-                self.model.regressor.set_params(thetaStar)
-                print("....done resetting to theta*")
+            #     #reset weights of regressor to theta*
+            #     self.model.regressor.set_params(thetaStar)
+            #     print("....done resetting to theta*")
 
-                #take gradient step on theta* using the past K points
-                for _ in range(self.num_updates):
-                    self.sess.run([self.model.test_op], feed_dict=feed_dict)
+            #     #take gradient step on theta* using the past K points
+            #     for _ in range(self.num_updates):
+            #         self.sess.run([self.model.test_op], feed_dict=feed_dict)
 
             ########################
             #### COMPUTE ACTION ####
