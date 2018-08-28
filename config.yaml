@@ -9,6 +9,8 @@ training:
     meta_lr: 0.001                       # Meta learning rate
     update_lr: 2.0                      # Inner-update learning rate
     num_updates: 3                       # Number of inner updates
+    num_extra: 5                          # Should maybe depend on num_sgd_steps: the number to extend k by (aka increase update batch size)
+    num_sgd_steps: 2                    # The number of gradient steps to take in a single "inner update"; the steps are taken on a sliding window of the training data
     meta_loss: False                     # If True, learns the loss in the inner-update
     stop_grad: False                     # If True, do not use second derivatices in the inner-update
     multistep_loss: False

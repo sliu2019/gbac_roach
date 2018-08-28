@@ -19,11 +19,12 @@ class MAML:
         self.forward = self.regressor.forward_fc
         self.config = config
         self.multistep_loss = config['multistep_loss']
-        self.multi_updates = config.get('multi_updates', 1)
         self.meta_learn_lr = config.get('meta_learn_lr', False)
         self.regularization_weight = self.config['regularization_weight']
-        self.k = self.config['update_batch_size']//self.multi_updates
-        assert self.multi_updates > 0
+        self.num_extra = self.config['num_extra']
+        self.num_sgd_steps = self.config['num_sgd_steps']
+        self.k = self.config['update_batch_size']
+        
 
     def construct_model(self, input_tensors=None, prefix='metatrain_'):
 
@@ -32,11 +33,11 @@ class MAML:
             # b: test data for meta gradient
         if input_tensors is None:
             self.inputa = tf.placeholder(self.regressor.tf_datatype,
-                          shape=(None, self.config['update_batch_size'], self.regressor.dim_input))
+                          shape=(None, (self.config['update_batch_size']+self.num_sgd_steps-1), self.regressor.dim_input))
             self.inputb = tf.placeholder(self.regressor.tf_datatype,
                           shape=(None, self.config['update_batch_size'], self.regressor.dim_input))
             self.labela = tf.placeholder(self.regressor.tf_datatype,
-                          shape=(None, self.config['update_batch_size'], self.regressor.dim_output))
+                          shape=(None, (self.config['update_batch_size']+self.num_sgd_steps-1), self.regressor.dim_output))
             self.labelb = tf.placeholder(self.regressor.tf_datatype,
                           shape=(None, self.config['update_batch_size'], self.regressor.dim_output))
         else:
@@ -81,17 +82,16 @@ class MAML:
                 weights_norms = []
 
                 ########################################################################
-                ### calculate theta' using k consecutive points... from a single task
+                ### calculate theta' using k pts (from a single task)
                 ########################################################################
                 
-
-                for i in range(self.multi_updates):
+                ## loop where you do theta_i+1 = L(f_theta_i(inputa_chunk_i)), with chunks progressing by 1 point each time
+                for i in range(self.num_sgd_steps):
                     
-                    
-                    task_outputa = self.forward(inputa[i*self.k:(i+1)*self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
-                        
-                    # calculate loss(f_weights{0}(inputa))
-                    task_lossa = self.loss_func(task_outputa, labela[i*self.k:(i+1)*self.k]) 
+                    #f_theta_i(inputa_chunk_i)
+                    task_outputa = self.forward(inputa[i:i + self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
+                    #L(f_theta_i(inputa_chunk_i))
+                    task_lossa = self.loss_func(task_outputa, labela[i:i+self.k])
 
                     # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                     grads = tf.gradients(task_lossa, list(fast_weights.values()))
@@ -104,18 +104,18 @@ class MAML:
                             zip(fast_weights.keys(), [fast_weights[key] - self.update_lr * gradients[key] for key in fast_weights.keys()]))
 
                 ########################################################################
-                ### calculate L of f(theta') on k consecutive points... for single task
+                ### calculate L of f(theta') on k pts (from a single task)
                 ########################################################################
 
                 # calculate output of f_weights{1}(inputb)
                 
                 output = self.forward(inputb, fast_weights, reuse=True, meta_loss=False)
-
                 task_outputbs.append(output)
 
                 # calculate loss(f_weights{1}(inputb))
                 task_lossesb.append(self.loss_func(output, labelb))
 
+                #regularizer
                 trainable_vars = tf.trainable_variables()
                 non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
                 regularizer = self.regularization_weight*tf.add_n(non_bias_weights)/float(len(non_bias_weights))
@@ -123,8 +123,8 @@ class MAML:
 
                 # if taking more inner-update gradient steps
                 for j in range(num_updates - 1):
-                    for i in range(self.multi_updates):
-                        loss = self.loss_func(self.forward(inputa[i * self.k:(i + 1) * self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i * self.k:(i + 1) * self.k]) # only reuse on the first iter
+                    for i in range(self.num_sgd_steps):
+                        loss = self.loss_func(self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i:i+self.k])
 
                         # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                         grads = tf.gradients(loss, list(fast_weights.values()))
@@ -238,10 +238,10 @@ class MAML:
         fast_weights = weights
         inputa = inputa[0]
         labela = labela[0]
-        for i in range(self.multi_updates): # This used to say multi-updates???
-            task_outputa = self.forward(inputa[i*self.k:(i+1)*self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
+        for i in range(self.num_sgd_steps): # This used to say multi-updates???
+            task_outputa = self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
             # calculate loss(f_weights{0}(inputa))
-            task_lossa = self.loss_func(task_outputa, labela[i*self.k:(i+1)*self.k])/float(self.k)
+            task_lossa = self.loss_func(task_outputa, labela[i:i+self.k])
             # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
             grads = tf.gradients(task_lossa, list(fast_weights.values()))
             gradients = dict(zip(fast_weights.keys(), grads))

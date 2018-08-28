@@ -22,6 +22,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   meta_bs = train_config['meta_batch_size']
   update_bs = train_config['update_batch_size']
   curr_agg_iter = config['aggregation']['curr_agg_iter']
+  num_sgd_steps = train_config['num_sgd_steps']
 
   #init vars
   t0 = time.time()
@@ -32,7 +33,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   all_indices = []
   for taski in range(len(inputs_full)):
     for rollouti in range(len(inputs_full[taski])):
-      all_rollout_indices = [(taski, rollouti, x) for x in range(len(inputs_full[taski][rollouti]) - update_bs*2 + 1)]
+      all_rollout_indices = [(taski, rollouti, x) for x in range(len(inputs_full[taski][rollouti]) - 2*(update_bs+num_sgd_steps-1) + 1)]
       all_indices.extend(all_rollout_indices)
 
   all_indices = np.array(all_indices)
@@ -58,10 +59,37 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   # Before training, save the weight and bias initialization in numpy form
   all_random_indices = np.empty((0, len(all_indices)))
 
-  # DELETE AFTER 3:00 PM SATURDAY
-  trainable_vars = sess.run(tf.trainable_variables())
-  pickle.dump(trainable_vars, open(osp.join(path, 'weight_restore_before_training.yaml'), 'w'))
+  # Form the validation data
+  # off-policy dataset
+  inputa_val_offpol = []
+  inputb_val_offpol = []
+  labela_val_offpol = []
+  labelb_val_offpol = []
 
+  for task_num in range(len(inputs_full_val)):
+    for rollout_num in range(len(inputs_full_val[task_num])):
+      inputa_val_offpol.append(inputs_full_val[task_num][rollout_num][:update_bs+num_sgd_steps-1])
+      inputb_val_offpol.append(inputs_full_val[task_num][rollout_num][update_bs + num_sgd_steps -1:2*update_bs + num_sgd_steps -1])
+      labela_val_offpol.append(outputs_full_val[task_num][rollout_num][:update_bs + num_sgd_steps - 1])
+      labelb_val_offpol.append(outputs_full_val[task_num][rollout_num][update_bs + num_sgd_steps -1:2*update_bs  + num_sgd_steps -1])
+
+  #IPython.embed()
+  inputa_val_offpol = np.array(inputa_val_offpol)
+  inputb_val_offpol = np.array(inputb_val_offpol)
+  labela_val_offpol = np.array(labela_val_offpol)
+  labelb_val_offpol = np.array(labelb_val_offpol)
+
+  # on-policy dataset
+  if curr_agg_iter != 0:
+    inputa_val_onpol = inputs_full_val_onPol[:, :, :update_bs+num_sgd_steps-1] # Err ... it's on the same data everytime. WHich should be the case, no? 
+    inputb_val_onpol = inputs_full_val_onPol[:, :, update_bs+num_sgd_steps-1:2*update_bs+num_sgd_steps-1]
+    labela_val_onpol = outputs_full_val_onPol[:, :, :update_bs+num_sgd_steps-1]
+    labelb_val_onpol = outputs_full_val_onPol[:, :, update_bs+num_sgd_steps-1:2*update_bs+num_sgd_steps-1]
+
+    inputa_val_onpol = np.concatenate([inputa_val_onpol[i] for i in range(len(inputa_val_onpol))])
+    inputb_val_onpol = np.concatenate([inputb_val_onpol[i] for i in range(len(inputb_val_onpol))])
+    labela_val_onpol = np.concatenate([labela_val_onpol[i] for i in range(len(labela_val_onpol))])
+    labelb_val_onpol = np.concatenate([labelb_val_onpol[i] for i in range(len(labelb_val_onpol))])
 
   for training_epoch in range(config['sampler']['max_epochs']):
     random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
@@ -82,16 +110,17 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       #IPython.embed()
       indices_batch = all_indices[random_indices_batch]
       
-      inputs_batch = np.array([inputs_full[i[0]][i[1]][i[2]:i[2] + 2*update_bs] for i in indices_batch])
-      outputs_batch = np.array([outputs_full[i[0]][i[1]][i[2]:i[2] + 2*update_bs] for i in indices_batch])
+      inputs_batch = np.array([inputs_full[i[0]][i[1]][i[2]:i[2] + (update_bs+num_sgd_steps-1) + update_bs] for i in indices_batch])
+      outputs_batch = np.array([outputs_full[i[0]][i[1]][i[2]:i[2] + (update_bs+num_sgd_steps-1) + update_bs] for i in indices_batch])
 
       #use the 1st half as training data for inner-loop gradient
-      inputa = inputs_batch[:, :update_bs, :]
-      labela = outputs_batch[:, :update_bs, :]
+      inputa = inputs_batch[:, :update_bs+num_sgd_steps-1, :]
+      labela = outputs_batch[:, :update_bs+num_sgd_steps-1, :]
       #use the 2nd half as test data for outer-loop gradient
-      inputb = inputs_batch[:, update_bs:, :]
-      labelb = outputs_batch[:, update_bs:, :]
+      inputb = inputs_batch[:, update_bs+num_sgd_steps-1:, :]
+      labelb = outputs_batch[:, update_bs+num_sgd_steps-1:, :]
 
+      IPython.embed() #check that the size of the b batch is update_bs, a batch is update_bs + numsgdsteps - 1
       #############################
       ## run meta-training iteration
       #############################
@@ -145,45 +174,16 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     ################################
     ####### Validation loss ########
     ################################
-    # Random
-    # Want to keep ts constant across rollouts
-    inputa = []
-    inputb = []
-    labela = []
-    labelb = []
-
-    for task_num in range(len(inputs_full_val)):
-      for rollout_num in range(len(inputs_full_val[task_num])):
-        inputa.append(inputs_full_val[task_num][rollout_num][:update_bs])
-        inputb.append(inputs_full_val[task_num][rollout_num][update_bs:2*update_bs])
-        labela.append(outputs_full_val[task_num][rollout_num][:update_bs])
-        labelb.append(outputs_full_val[task_num][rollout_num][update_bs:2*update_bs])
-
-    #IPython.embed()
-    inputa = np.array(inputa)
-    inputb = np.array(inputb)
-    labela = np.array(labela)
-    labelb = np.array(labelb)
-
-    feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
+    # Random (off-policy) data
+    feed_dict = {model.inputa: inputa_val_offpol, model.inputb: inputb_val_offpol, model.labela: labela_val_offpol, model.labelb: labelb_val_offpol}
     val_loss = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)
     vallosses.append(val_loss)
 
     print("Validation loss:", val_loss)
 
-    # MPC
+    # MPC (on-policy) data
     if curr_agg_iter != 0:
-      inputa = inputs_full_val_onPol[:, :, :update_bs] # Err ... it's on the same data everytime. WHich should be the case, no? 
-      inputb = inputs_full_val_onPol[:, :, update_bs:2*update_bs]
-      labela = outputs_full_val_onPol[:, :, :update_bs]
-      labelb = outputs_full_val_onPol[:, :, update_bs:2*update_bs]
-
-      inputa = np.concatenate([inputa[i] for i in range(len(inputa))])
-      inputb = np.concatenate([inputb[i] for i in range(len(inputb))])
-      labela = np.concatenate([labela[i] for i in range(len(labela))])
-      labelb = np.concatenate([labelb[i] for i in range(len(labelb))])
-
-      feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
+      feed_dict = {model.inputa: inputa_val_onpol, model.inputb: inputb_val_onpol, model.labela: labela_val_onpol, model.labelb: labelb_val_onpol}
       val_loss_onPol = sess.run(model.mse_loss[train_config['num_updates'] - 1], feed_dict)
       vallosses_onPol.append(val_loss_onPol)
 
