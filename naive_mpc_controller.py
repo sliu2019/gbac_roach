@@ -11,6 +11,7 @@ from visualization_msgs.msg import Marker
 from visualization_msgs.msg import MarkerArray
 from utils import *
 import IPython
+import random
 
 class NaiveMPCController(Policy, Serializable):
     def __init__(
@@ -129,13 +130,14 @@ class NaiveMPCController(Policy, Serializable):
     ##### GET BEST ACTION
     ############################################
 
-    def get_best_action(self, observation, currently_executing_action, curr_line_segment, old_curr_forward):
+    def get_best_action(self, observation, currently_executing_action, curr_line_segment, old_curr_forward, color):
         n = self.n_candidates
         full_curr_state = np.copy(observation)
 
         #randomly sample n sequences of length-h actions (for multiple envs in parallel)
             #[h, N, ac_dim]
         a = self.get_random_action(self.horizon*n).reshape((self.horizon, n, -1))
+        #print(a[:5, :15, :])
 
         #make the 1st one be the currently executing action
         a[0,:,0]=currently_executing_action[0]
@@ -155,15 +157,15 @@ class NaiveMPCController(Policy, Serializable):
             observation = next_observation
 
         #evaluate all options and pick the best one
-        optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions = self.select_the_best_one_for_traj_follow(full_curr_state, a, np.array(resulting_states), curr_line_segment, old_curr_forward)
+        optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions, best_sequence_of_states = self.select_the_best_one_for_traj_follow(full_curr_state, a, np.array(resulting_states), curr_line_segment, old_curr_forward, color)
 
-        return optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions
+        return optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions, best_sequence_of_states
 
     #################################################
     ##### ACTION SELECTION when trajectory following
     #################################################
 
-    def select_the_best_one_for_traj_follow(self, full_curr_state, all_samples, resulting_states, curr_line_segment, old_curr_forward):
+    def select_the_best_one_for_traj_follow(self, full_curr_state, all_samples, resulting_states, curr_line_segment, old_curr_forward, color):
 
         desired_states= self.desired_states
         
@@ -360,7 +362,7 @@ class NaiveMPCController(Policy, Serializable):
         ########################################
         #### pick best one 
         ########################################
-
+        print(scores[:15])
         best_score = np.min(scores)
         best_sim_number = np.argmin(scores) 
         best_sequence_of_actions = all_samples[:,best_sim_number,:]
@@ -394,19 +396,24 @@ class NaiveMPCController(Policy, Serializable):
             markerArray = MarkerArray()
             marker_id=0
 
-            #print("rviz red dot state shape: ", best_sequence_of_states[0, :].shape)
+            print("rviz red dot state shape: ", best_sequence_of_states[0, :].shape)
             for marker_num in range(resulting_states.shape[0]):
                 marker = Marker()
                 marker.id=marker_id
                 marker.header.frame_id = "/world"
                 marker.type = marker.SPHERE
                 marker.action = marker.ADD
-                marker.scale.x = 0.1
-                marker.scale.y = 0.1
-                marker.scale.z = 0.1
+                marker.scale.x = 0.05
+                marker.scale.y = 0.05
+                marker.scale.z = 0.05
                 marker.color.a = 1.0
-                marker.color.r = 1.0
-                marker.color.g = 0.0
+
+                if color == "green":
+                    marker.color.r = 0.0
+                    marker.color.g = 1.0
+                elif color == "red":
+                    marker.color.r = 1.0
+                    marker.color.g = 0.0
                 marker.color.b = 0.0
                 marker.pose.position.x = best_sequence_of_states[marker_num,0]
                 marker.pose.position.y = best_sequence_of_states[marker_num,1]
@@ -415,6 +422,40 @@ class NaiveMPCController(Policy, Serializable):
                 markerArray.markers.append(marker)
                 marker_id+=1
             self.publish_markers.publish(markerArray)
+
+            if color == "red":
+                # sample random resulting state sequences
+                samples = np.random.randint(0, resulting_states.shape[1], size=7)
+                #IPython.embed() #what size?
+
+                for sample in samples:
+                    red_val = random.uniform(0, 1)
+                    blue_val = random.uniform(0, 1)
+                    green_val = random.uniform(0, 1)
+
+                    sequence_of_states = resulting_states[:, sample, :]
+                    for marker_num in range(sequence_of_states.shape[0]):
+                        marker = Marker()
+                        marker.id=marker_id
+                        marker.header.frame_id = "/world"
+                        marker.type = marker.SPHERE
+                        marker.action = marker.ADD
+                        marker.scale.x = 0.05
+                        marker.scale.y = 0.05
+                        marker.scale.z = 0.05
+                        marker.color.a = 1.0
+
+                        
+                        marker.color.r = red_val
+                        marker.color.g = blue_val
+                        marker.color.b = green_val
+                        marker.pose.position.x = sequence_of_states[marker_num,0]
+                        marker.pose.position.y = sequence_of_states[marker_num,1]
+                        #print("rviz detects current roach pose to be: ", best_sequence_of_states[marker_num, :2])
+                        marker.pose.position.z = 0
+                        markerArray.markers.append(marker)
+                        marker_id+=1
+                    self.publish_markers.publish(markerArray)
 
         #info for saving
         info_for_saving={
@@ -429,6 +470,7 @@ class NaiveMPCController(Policy, Serializable):
         #the 0th entry is the currently executing action... so the 1st entry is the optimal action to take
         action_to_take = np.copy(best_sequence_of_actions[1])
 
-        return action_to_take, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions
+        return action_to_take, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions, best_sequence_of_states
+
 
 

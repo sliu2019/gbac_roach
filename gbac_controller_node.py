@@ -114,9 +114,19 @@ class GBAC_Controller(object):
         curr_line_segment = 0
         old_curr_forward=0
 
+        # Remove after testing
+        curr_line_segment_test = 0
+        old_curr_forward_test =0
+
         #init vars
         step=0
         optimal_action=[0,0]
+
+        # init the "past k" window
+        # The dimensions are hard-coded
+        inputa = np.empty((0, 24))
+        labela = np.empty((0, 24))
+        K = self.update_batch_size
 
         while True:
 
@@ -235,46 +245,130 @@ class GBAC_Controller(object):
             ########################
             ### UPDATE REGRESSOR ###
             ########################
+            # if step >= 2:
+            #     s = create_nn_input_using_staterep(self.traj_taken[-2], self.state_representation)
+            #     a = self.actions_taken[-2]
+            #     ds = self.traj_taken[-1]-self.traj_taken[-2]
+            #     if step < 2 + K: 
+            #         #IPython.embed() # check s, a shapes for concat
+            #         inputa = np.append(inputa, np.expand_dims(np.concatenate((s, a)), axis=1).T, axis=0)
+            #         labela = np.append(labela, np.expand_dims(ds, axis=1).T, axis=0)
+            #         #IPython.embed() #check the resulting shapes
 
-            # get the past K points (s,a,ds)
-            # length= len(self.traj_taken)
-            # K = self.update_batch_size
-            # if(length>K):
-            #     i= length-1-K
-            #     list_of_s=[]
-            #     list_of_a=[]
-            #     list_of_ds=[]
-            #     while(i<(length-1)):
-            #         list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
-            #         list_of_a.append(self.actions_taken[i])
-            #         list_of_ds.append(self.traj_taken[i+1]-self.traj_taken[i])
-            #         i+=1
-            #     list_of_s= np.array(list_of_s)
-            #     list_of_a= np.array(list_of_a)
-            #     list_of_ds= np.array(list_of_ds)
+            #         # Tile, then get rid of excess
+            #         IPython.embed()
+            #         reps = int(np.ceil(K/float(inputa.shape[0])))
+            #         inputa_temp = np.tile(inputa, (reps,1))
+            #         labela_temp = np.tile(labela, (reps,1))
 
-            #     #to do: speed this section up by doing fewer conversions/list-making
-            #     # Couldn't you use numpy and vector operations to parallelize
+            #         inputa_temp = np.delete(inputa_temp, range(inputa.shape[0]*reps % K), axis=0)
+            #         labela_temp = np.delete(labela_temp, range(inputa.shape[0]*reps % K), axis=0)
 
-            #     #organize the points into what the regressor wants
-            #     k_labels = (list_of_ds).reshape(1, K, -1)
-            #     k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
-            #     feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
+            #         inputa_temp = np.expand_dims(inputa_temp, axis=0)
+            #         labela_temp = np.expand_dims(labela_temp, axis=0)
+
+            #         feed_dict = {self.model.inputa: inputa_temp, self.model.labela: labela_temp}
+            #     else: 
+            #         inputa = np.delete(inputa, 0, axis=0)
+            #         labela = np.delete(labela, 0, axis=0)
+
+            #         #IPython.embed() # check s, a shapes for concat
+            #         inputa = np.append(inputa, np.expand_dims(np.concatenate((s, a)), axis=1).T, axis=0)
+            #         labela = np.append(labela, np.expand_dims(ds, axis=1).T, axis=0)
+            #         #IPython.embed() #check the resulting shapes
+
+            #         inputa = np.expand_dims(inputa, axis=0)
+            #         labela = np.expand_dims(labela, axis=0)
+
+            #         feed_dict = {self.model.inputa: inputa, self.model.labela: labela}
 
             #     #reset weights of regressor to theta*
             #     self.model.regressor.set_params(thetaStar)
             #     print("....done resetting to theta*")
+            #     #self.model.regressor.set_params(thetaCurrent)
 
             #     #take gradient step on theta* using the past K points
             #     for _ in range(self.num_updates):
+            #         print("taking a gradient step")
             #         self.sess.run([self.model.test_op], feed_dict=feed_dict)
+
+            # get the past K points (s,a,ds)
+            length= len(self.traj_taken)
+            K = self.update_batch_size
+            if length >= 2:
+                if length <= K:
+                    list_of_s=[]
+                    list_of_a=[]
+                    list_of_ds=[]
+
+                    for i in range(length-1):
+                        s = create_nn_input_using_staterep(self.traj_taken[i], self.state_representation)
+                        a = self.actions_taken[i]
+                        ds = self.traj_taken[i+1]-self.traj_taken[i]
+
+                        list_of_s.append(s)
+                        list_of_a.append(a)
+                        list_of_ds.append(ds)
+
+                    # count = 0
+                    # for j in range(K-(length-1)):
+                    #     list_of_s.append(list_of_s[i])
+                    #     list_of_a.append(list_of_a[i])
+                    #     list_of_ds.append(list_of_ds[i])
+                    #     count+=1
+                    #     if count >= (length-1):
+                    #         count = 0
+
+                    for j in range(K-(length-1)):
+                        list_of_s.append(s)
+                        list_of_a.append(a)
+                        list_of_ds.append(ds)
+
+                if(length>K):
+                    i= length-1-K
+                    list_of_s=[]
+                    list_of_a=[]
+                    list_of_ds=[]
+                    while(i<(length-1)): # You can implement this faster by using a queue
+                        list_of_s.append(create_nn_input_using_staterep(self.traj_taken[i], self.state_representation))
+                        list_of_a.append(self.actions_taken[i])
+                        list_of_ds.append(self.traj_taken[i+1]-self.traj_taken[i])
+                        i+=1
+                list_of_s= np.array(list_of_s)
+                list_of_a= np.array(list_of_a)
+                list_of_ds= np.array(list_of_ds)
+
+                #to do: speed this section up by doing fewer conversions/list-making
+                # Couldn't you use numpy and vector operations to parallelize
+
+                #organize the points into what the regressor wants
+                k_labels = (list_of_ds).reshape(1, K, -1)
+                k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
+                feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
+
+                #reset weights of regressor to theta*
+                self.model.regressor.set_params(thetaStar)
+                print("....done resetting to theta*")
+                #self.model.regressor.set_params(thetaCurrent)
+
+                #take gradient step on theta* using the past K points
+                for _ in range(self.num_updates):
+                    print("taking a gradient step")
+                    self.sess.run([self.model.test_op], feed_dict=feed_dict)
 
             ########################
             #### COMPUTE ACTION ####
             ########################
-
+            old_curr_forward_before = old_curr_forward
+            curr_line_segment_before = curr_line_segment
+            optimal_action_before = optimal_action
             #get the best action
-            optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward)            
+            optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions, best_sequence_of_states = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward, "red")            
+
+            #reset weights of regressor to theta*
+            self.model.regressor.set_params(thetaStar)
+            # For debugging only: get best action for theta* and also plot it
+            optimal_action_test, curr_line_segment_test, old_curr_forward_test, info_for_saving_test, best_sequence_of_actions_test, best_sequence_of_states_test = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action_before), curr_line_segment_before, old_curr_forward_before, "green")          
 
             ########################
             ######## SAVING ########

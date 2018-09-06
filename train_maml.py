@@ -28,7 +28,11 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   t0 = time.time()
   prelosses, postlosses,vallosses, vallosses_onPol, metatrain_losses_withReg, metatrain_losses = [], [], [], [], [], []
   multitask_weights, reg_weights = [], []
-  total_points_per_task = len(inputs_full[1])*len(inputs_full[1][0]) #numRollouts * pointsPerRollout
+  
+  total_datapoints = 0
+  for taski in range(len(inputs_full)):
+    for rollouti in range(len(inputs_full[taski])):
+      total_datapoints += len(inputs_full[taski][rollouti])
   
   all_indices = []
   for taski in range(len(inputs_full)):
@@ -40,8 +44,8 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   #IPython.embed() # check all_indices, rand_indices shape, look inside inputs_full to see if neglected tasks occupy empty space
   
   #writer for log
-  #path = save_path[:-len(save_path.split('/')[-1])]
-  path = logger.get_snapshot_dir() ########################################################################################################################## remember to comment this out
+  path = save_path[:-len(save_path.split('/')[-1])]
+  #####################################path = logger.get_snapshot_dir() ########################################################################################################################## remember to comment this out
   
   #IPython.embed()
   if log_config['log']:
@@ -91,6 +95,9 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     labela_val_onpol = np.concatenate([labela_val_onpol[i] for i in range(len(labela_val_onpol))])
     labelb_val_onpol = np.concatenate([labelb_val_onpol[i] for i in range(len(labelb_val_onpol))])
 
+  name = "model_weight_inialization"
+  saver.save(sess,  osp.join(path, name))
+
   for training_epoch in range(config['sampler']['max_epochs']):
     random_indices = npr.choice(len(all_indices), size=(len(all_indices)), replace=False) # shape: (x,)
 
@@ -100,7 +107,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
     print()
     print("************* TRAINING EPOCH: ", training_epoch)
     gradient_step=0
-    while((gradient_step*meta_bs*update_bs) < total_points_per_task*4): # I feel like this should be different....
+    while((gradient_step*meta_bs*update_bs) < total_datapoints): # I feel like this should be different....
 
       ####################################################
       ## randomly select batch of data, for 1 outer-gradient step
@@ -114,13 +121,14 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       outputs_batch = np.array([outputs_full[i[0]][i[1]][i[2]:i[2] + (update_bs+num_sgd_steps-1) + update_bs] for i in indices_batch])
 
       #use the 1st half as training data for inner-loop gradient
+
       inputa = inputs_batch[:, :update_bs+num_sgd_steps-1, :]
       labela = outputs_batch[:, :update_bs+num_sgd_steps-1, :]
       #use the 2nd half as test data for outer-loop gradient
       inputb = inputs_batch[:, update_bs+num_sgd_steps-1:, :]
       labelb = outputs_batch[:, update_bs+num_sgd_steps-1:, :]
 
-      IPython.embed() #check that the size of the b batch is update_bs, a batch is update_bs + numsgdsteps - 1
+      #IPython.embed() #check that the size of the b batch is update_bs, a batch is update_bs + numsgdsteps - 1
       #############################
       ## run meta-training iteration
       #############################
@@ -131,7 +139,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       #which tensors to populate/execute during the sess.run call
       input_tensors = [model.metatrain_op]
       if gradient_step % log_config['print_itr'] == 0 or gradient_step % log_config['summary_itr'] == 0:
-          input_tensors.extend([model.summ_op, model.total_loss1, model.total_losses2[train_config['num_updates'] - 1]])
+          input_tensors.extend([model.summ_op, model.total_loss1, model.total_losses2[train_config['num_updates'] - 1], model.lossesb])
 
       #make the sess.run call to perform one metatraining iteration
       feed_dict = {model.inputa: inputa, model.inputb: inputb, model.labela: labela, model.labelb: labelb}
@@ -144,10 +152,10 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       #############################
 
       if gradient_step % log_config['summary_itr'] == 0:
-        prelosses.append(result[-2])
+        prelosses.append(result[2])
         if log_config['log']:
             train_writer.add_summary(result[1], gradient_step)
-        postlosses.append(result[-1])
+        postlosses.append(result[3])
 
       if gradient_step % log_config['print_itr'] == 0:
         print_str = 'Gradient step ' + str(gradient_step)
@@ -188,6 +196,7 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       vallosses_onPol.append(val_loss_onPol)
 
       print("Validation loss (on policy):", val_loss_onPol)
+
     ################################
     ##### Save every 5 epochs ######
     ################################
@@ -205,6 +214,22 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
       np.save(path + '/debuggingLR_vallosses_aggIter'+str(curr_agg_iter)+'.npy', vallosses)
       np.save(path + '/debuggingLR_vallosses_onPol_aggIter'+str(curr_agg_iter)+'.npy', vallosses)
 
+      if(training_epoch>0):
+
+        # Make validation plot
+        x = np.arange(0, training_epoch+1)
+        plt.figure()
+        plt.plot(x, metatrain_losses_withReg, color ='r', label="metatrain_losses_withReg")
+        plt.plot(x, metatrain_losses, 'r--', label="metatrain_losses")
+        plt.plot(x, vallosses, color='g', label="Validation, random")
+        if curr_agg_iter != 0:
+          plt.plot(x, vallosses_onPol, color='b', label="Validation, on policy")
+        plt.legend(loc="upper right", prop = {"size":6})
+        plt.title("MPE")
+        plt.savefig(path + "/mpe_graph_aggIter"+str(curr_agg_iter)+".png")
+        plt.clf()
+        #plt.show()
+
   ################################
   ####### Save at the end ########
   ################################
@@ -216,16 +241,4 @@ def train(inputs_full, outputs_full, curr_agg_iter, model, saver, sess, config, 
   np.save(path + '/debuggingLR_vallosses_aggIter'+str(curr_agg_iter)+'.npy', vallosses)
   np.save(path + '/debuggingLR_vallosses_onPol_aggIter'+str(curr_agg_iter)+'.npy', vallosses)
 
-  # Make validation plot
-  x = np.arange(0, config['sampler']['max_epochs'])
-  plt.figure()
-  plt.plot(x, metatrain_losses_withReg, color ='r', label="metatrain_losses_withReg")
-  plt.plot(x, metatrain_losses, 'r--', label="metatrain_losses")
-  plt.plot(x, vallosses, color='g', label="Validation, random")
-  if curr_agg_iter != 0:
-    plt.plot(x, vallosses_onPol, color='b', label="Validation, on policy")
-  plt.legend(loc="upper right", prop = {"size":6})
-  plt.title("MPE")
-  plt.savefig(path + "/mpe_graph_aggIter"+str(curr_agg_iter)+".png")
-  plt.clf()
-  #plt.show()
+ 

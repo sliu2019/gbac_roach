@@ -19,7 +19,7 @@ class MAML:
         self.forward = self.regressor.forward_fc
         self.config = config
         self.multistep_loss = config['multistep_loss']
-        self.meta_learn_lr = config.get('meta_learn_lr', False)
+        self.meta_learn_lr = config['learn_inner_loss']
         self.regularization_weight = self.config['regularization_weight']
         self.num_extra = self.config['num_extra']
         self.num_sgd_steps = self.config['num_sgd_steps']
@@ -65,8 +65,7 @@ class MAML:
                 self.weights = weights = self.regressor.weights
 
             if self.meta_learn_lr:
-                self.update_lr = dict([(k, tf.Variable(self.update_lr * tf.ones(tf.shape(v)),
-                                                       name='lr_'+k)) for k,v in weights.items()])
+                self.update_lr = dict([(k, tf.Variable(self.update_lr * tf.ones(tf.shape(v)), name='lr_'+k, trainable=True)) for k,v in weights.items()])
 
             #########################################################
             ## Function to perform the inner gradient calculations
@@ -97,7 +96,7 @@ class MAML:
                     grads = tf.gradients(task_lossa, list(fast_weights.values()))
                     gradients = dict(zip(fast_weights.keys(), grads))
                     if self.meta_learn_lr:
-                        fast_weights = dict(
+                        theta_prime = fast_weights = dict(
                             zip(fast_weights.keys(), [fast_weights[key] - self.update_lr[key] * gradients[key] for key in fast_weights.keys()]))
                     else:
                         theta_prime = fast_weights = dict(
@@ -118,7 +117,7 @@ class MAML:
                 #regularizer
                 trainable_vars = tf.trainable_variables()
                 non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
-                regularizer = self.regularization_weight*tf.add_n(non_bias_weights)/float(len(non_bias_weights))
+                regularizer = self.regularization_weight*tf.add_n(non_bias_weights)
                 weights_norms.append(regularizer)
 
                 # if taking more inner-update gradient steps
@@ -145,7 +144,7 @@ class MAML:
 
                     trainable_vars = tf.trainable_variables()
                     non_bias_weights = [tf.nn.l2_loss(v) for v in trainable_vars if ('bias' not in v.name and 'b' not in v.name)]
-                    regularizer = self.regularization_weight*tf.add_n(non_bias_weights)/float(len(non_bias_weights))
+                    regularizer = self.regularization_weight*tf.add_n(non_bias_weights)
                     weights_norms.append(regularizer)
                 # task_outputa :    f_weights{0}(inputa)
                 # task_outputbs :   [f_weights{1}(inputb), f_weights{2}(inputb), ...]
@@ -153,10 +152,10 @@ class MAML:
                 # task_lossesb :    [loss(f_weights{1}(inputb)), loss(f_weights{2}(inputb)), ...]
 
                 ####################task_output = [task_outputa, task_outputbs, task_lossa, task_lossesb]
-                list_of_theta = [self.weights['W0'],self.weights['W1'],self.weights['W2'],self.weights['b0'],self.weights['b1'],self.weights['b2'],self.weights['bias']]
-                list_of_gradient = [gradients['W0'],gradients['W1'],gradients['W2'],gradients['b0'],gradients['b1'],gradients['b2'],gradients['bias']]
-                list_of_thetaPrime = [theta_prime['W0'],theta_prime['W1'],theta_prime['W2'],theta_prime['b0'],theta_prime['b1'],theta_prime['b2'],theta_prime['bias']]
-                task_output = [task_outputa, task_outputbs, task_lossa, task_lossesb, list_of_theta, self.update_lr, list_of_gradient, list_of_thetaPrime, weights_norms]
+                list_of_theta = [self.weights['W0'],self.weights['W1'],self.weights['W2'],self.weights['b0'],self.weights['b1'],self.weights['b2']]
+                list_of_gradient = [gradients['W0'],gradients['W1'],gradients['W2'],gradients['b0'],gradients['b1'],gradients['b2']]
+                list_of_thetaPrime = [theta_prime['W0'],theta_prime['W1'],theta_prime['W2'],theta_prime['b0'],theta_prime['b1'],theta_prime['b2']]
+                task_output = [task_outputa, task_outputbs, task_lossa, task_lossesb, weights_norms] ###############, list_of_theta, self.update_lr, list_of_gradient, list_of_thetaPrime, weights_norms]
                 return task_output
 
             # to initialize the batch norm vars
@@ -168,21 +167,15 @@ class MAML:
             ## Output of performing inner gradient calculations
             #########################################################
 
-            ####################out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates]
-            out_dtype = [self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*7, self.regressor.tf_datatype, [self.regressor.tf_datatype]*7, [self.regressor.tf_datatype]*7, [self.regressor.tf_datatype]*num_updates]
+            out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates, [self.regressor.tf_datatype]*num_updates]
+            ####################out_dtype = [self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*6, self.regressor.tf_datatype, [self.regressor.tf_datatype]*6, [self.regressor.tf_datatype]*6, [self.regressor.tf_datatype]*num_updates]
             #out_dtype = [tf.int32, [tf.int32]*num_updates, tf.int32, [tf.int32]*num_updates, [tf.int32]*7, tf.int32, [tf.int32]*7, [tf.int32]*7]
             result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=self.config['meta_batch_size'])
-            #result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=1)
 
             #these return values are lists w a different entry for each task...
                 #average over all tasks when doing the outer gradient update (metatrain_op)
-            ####################outputas, outputbs, lossesa, lossesb = result
-            outputas, outputbs, lossesa, lossesb, theta_multiple, update_lr_multiple, gradients_of_theta_multiple, theta_prime_multiple, norms_of_weights = result
+            outputas, outputbs, lossesa, lossesb, norms_of_weights = result
             self.check_outputbs = outputbs
-            self.theta_multiple = theta_multiple
-            self.update_lr_multiple = update_lr_multiple
-            self.gradients_of_theta_multiple = gradients_of_theta_multiple
-            self.theta_prime_multiple = theta_prime_multiple
             self.norms_of_weights = norms_of_weights
             self.lossesb = lossesb
             self.lossesa = lossesa
@@ -196,19 +189,6 @@ class MAML:
 
         # avg loss(f_weights{0}(inputa))
         self.total_loss1 = tf.reduce_mean(lossesa)
-
-        #################### REMEMBER TO REMOVE THIS AFTER TRAINING NONGBAC MODEL #############################
-
-        # self.regularization_weight = self.config['regularization_weight']
-        # self.trainable_vars = tf.trainable_variables()
-        # self.regularizer = self.regularization_weight*tf.add_n([tf.nn.l2_loss(v) for v in self.trainable_vars if ('bias' not in v.name and 'b' not in v.name)])
-        # #IPython.embed()
-        # self.lossesa = lossesa
-        # self.total_loss1 = tf.reduce_mean(lossesa + self.regularizer)
-        ########################################################################################################
-
-        # [avg loss(f_weights{1}(inputb)), avg loss(f_weights{2}(inputb)), ...]
-            #this is the L of f(theta') on validation set, which is used by the (metatrain_op)
 
         #############################################################################
         ###### YOU WILL NEED TO CHANGE THIS REGULARIZER WHEN NUM_UPDATES > 1 ########
@@ -225,7 +205,6 @@ class MAML:
         self.mse_loss = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
 
         self.regularizer = tf.reduce_mean(self.norms_of_weights[num_updates-1])
-        #IPython.embed()
 
         #########################################
         ## Define pretrain_op
@@ -238,19 +217,35 @@ class MAML:
         fast_weights = weights
         inputa = inputa[0]
         labela = labela[0]
+
+        ##############################################################
+        test_optimizer = tf.train.MomentumOptimizer(self.update_lr, self.config['momentum'], use_nesterov = False)
+        ##############################################################
+
         for i in range(self.num_sgd_steps): # This used to say multi-updates???
             task_outputa = self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
             # calculate loss(f_weights{0}(inputa))
             task_lossa = self.loss_func(task_outputa, labela[i:i+self.k])
             # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
-            grads = tf.gradients(task_lossa, list(fast_weights.values()))
+            
+            ##############################################################
+            if self.config['use_momentum']:
+                grads = test_optimizer.compute_gradients(task_lossa, var_list = list(fast_weights.values()))
+                grads = [x[0] for x in grads]
+            else:
+                grads = tf.gradients(task_lossa, list(fast_weights.values()))
+
+            ##############################################################
             gradients = dict(zip(fast_weights.keys(), grads))
+            #IPython.embed()
+            
             if self.meta_learn_lr:
                 fast_weights = dict(
                             zip(fast_weights.keys(), [fast_weights[key] - self.update_lr[key] * gradients[key] for key in fast_weights.keys()]))
             else:
                 fast_weights = dict(
                             zip(fast_weights.keys(), [fast_weights[key] - self.update_lr * gradients[key] for key in fast_weights.keys()]))
+
         self.test_op = [tf.assign(v, fast_weights[k]) for k, v in weights.items()]
 
         #########################################
@@ -260,8 +255,10 @@ class MAML:
         #UPDATE weights{0} using loss(f_weights{last_step}(inputb))
             #each inner update was done on K points (to calculate each theta')
             #this outer update is done using metaBS*K points
-
-        optimizer = tf.train.AdamOptimizer(self.meta_lr)
+        if self.config['optimizer'] == "adam":
+            optimizer = tf.train.AdamOptimizer(self.meta_lr)
+        elif self.config['optimizer'] == "momentum":
+            optimizer = tf.train.MomentumOptimizer(self.meta_lr, 0.9)
 
         ##################### #this is just one gradient step (ie normal training)
         ##################### #used for debugging other parts of code

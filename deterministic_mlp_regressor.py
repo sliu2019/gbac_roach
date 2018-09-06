@@ -24,10 +24,12 @@ class DeterministicMLPRegressor(object):
         self.weight_initializer_name = weight_initializer
         if weight_initializer == "xavier":
             self.weight_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype)
+            #self.bias_initializer = tf.zeros
+            self.bias_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype)
         elif weight_initializer == "truncated_normal":
             self.weight_initializer = tf.truncated_normal
+            self.bias_initializer = tf.zeros
 
-        self.bias_initializer = tf.zeros
         self.seed = seed
         #IPython.embed() # check seed
         #self.xavier_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype) ## 
@@ -128,7 +130,6 @@ class DeterministicMLPRegressor(object):
         out = tf.matmul(hidden, weights['W' + str(len(self.dim_hidden)+1)]) + weights[
             'b' + str(len(self.dim_hidden)+1)]
         if meta_loss:
-            IPython.embed()
             out = tf.reshape(out, [-1, out.get_shape().dims[-2].value, self.dim_output])
             for i in range(len(self.dim_conv1d) - 1):
                 out = normalize(tf.nn.conv1d(out,  weights['W_1d_conv' + str(i)], 1,
