@@ -7,6 +7,7 @@ Dependencies:
  * Rospy
  * ROS Kinetic
  * rllab at https://github.com/rll/rllab
+ * ipython version **5.8.0**
 
 Before doing anything, first replace `gym/envs/box2d/lunar_lander.py` with the provided `lunar_lander.py` file.
 

@@ -28,6 +28,9 @@ class ManJoyState():
     self.lock = threading.Condition()
 
   def joy_callback(self, joy_msg):
+
+    #print("callback")
+
     self.lock.acquire()
     # update joy_in based on analog axes
     self.joy_in[0] = (joy_msg.axes[1], joy_msg.axes[0])
