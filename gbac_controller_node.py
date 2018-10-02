@@ -11,7 +11,7 @@ import IPython
 import time
 
 #roach stuff
-from nn_dynamics_roach.msg import velroach_msg
+from gbac_roach.msg import velroach_msg
 import rospy
 from trajectories import make_trajectory
 from rospy.exceptions import ROSException
@@ -139,9 +139,10 @@ class GBAC_Controller(object):
 
             self.lock.acquire()
             for robot in self.robots:
-              send_action = np.copy(optimal_action)
+              send_action = np.copy(optimal_action) ###############
               print("\nsent action: ", send_action[0], send_action[1])
               if(self.use_pid_mode):
+                  #robot.setVelGetTelem()
                   robot.setVelGetTelem(send_action[0], send_action[1])
               else:
                   robot.setThrustGetTelem(send_action[0], send_action[1])
@@ -205,6 +206,13 @@ class GBAC_Controller(object):
 
             #create state from the info
             full_curr_state, _, _, _, _ = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, "all")
+
+            full_curr_state[2] = 0.035
+            ####### TO DO: remove this
+            # full_curr_state[8]= 0.994
+            # full_curr_state[9]=-0.109
+            #print(full_curr_state[9], full_curr_state[8])
+
             abbrev_curr_state, old_time, old_pos, old_al, old_ar = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, self.state_representation)
 
             ########################
@@ -245,53 +253,7 @@ class GBAC_Controller(object):
             ########################
             ### UPDATE REGRESSOR ###
             ########################
-            # if step >= 2:
-            #     s = create_nn_input_using_staterep(self.traj_taken[-2], self.state_representation)
-            #     a = self.actions_taken[-2]
-            #     ds = self.traj_taken[-1]-self.traj_taken[-2]
-            #     if step < 2 + K: 
-            #         #IPython.embed() # check s, a shapes for concat
-            #         inputa = np.append(inputa, np.expand_dims(np.concatenate((s, a)), axis=1).T, axis=0)
-            #         labela = np.append(labela, np.expand_dims(ds, axis=1).T, axis=0)
-            #         #IPython.embed() #check the resulting shapes
-
-            #         # Tile, then get rid of excess
-            #         IPython.embed()
-            #         reps = int(np.ceil(K/float(inputa.shape[0])))
-            #         inputa_temp = np.tile(inputa, (reps,1))
-            #         labela_temp = np.tile(labela, (reps,1))
-
-            #         inputa_temp = np.delete(inputa_temp, range(inputa.shape[0]*reps % K), axis=0)
-            #         labela_temp = np.delete(labela_temp, range(inputa.shape[0]*reps % K), axis=0)
-
-            #         inputa_temp = np.expand_dims(inputa_temp, axis=0)
-            #         labela_temp = np.expand_dims(labela_temp, axis=0)
-
-            #         feed_dict = {self.model.inputa: inputa_temp, self.model.labela: labela_temp}
-            #     else: 
-            #         inputa = np.delete(inputa, 0, axis=0)
-            #         labela = np.delete(labela, 0, axis=0)
-
-            #         #IPython.embed() # check s, a shapes for concat
-            #         inputa = np.append(inputa, np.expand_dims(np.concatenate((s, a)), axis=1).T, axis=0)
-            #         labela = np.append(labela, np.expand_dims(ds, axis=1).T, axis=0)
-            #         #IPython.embed() #check the resulting shapes
-
-            #         inputa = np.expand_dims(inputa, axis=0)
-            #         labela = np.expand_dims(labela, axis=0)
-
-            #         feed_dict = {self.model.inputa: inputa, self.model.labela: labela}
-
-            #     #reset weights of regressor to theta*
-            #     self.model.regressor.set_params(thetaStar)
-            #     print("....done resetting to theta*")
-            #     #self.model.regressor.set_params(thetaCurrent)
-
-            #     #take gradient step on theta* using the past K points
-            #     for _ in range(self.num_updates):
-            #         print("taking a gradient step")
-            #         self.sess.run([self.model.test_op], feed_dict=feed_dict)
-
+            #print(self.sess.run(self.model.update_lr))
             # get the past K points (s,a,ds)
             length= len(self.traj_taken)
             K = self.update_batch_size
@@ -347,9 +309,9 @@ class GBAC_Controller(object):
                 feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
 
                 #reset weights of regressor to theta*
-                self.model.regressor.set_params(thetaStar)
+                #self.model.regressor.set_params(thetaStar)
                 print("....done resetting to theta*")
-                #self.model.regressor.set_params(thetaCurrent)
+                self.model.regressor.set_params(thetaCurrent)
 
                 #take gradient step on theta* using the past K points
                 for _ in range(self.num_updates):
@@ -365,10 +327,16 @@ class GBAC_Controller(object):
             #get the best action
             optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions, best_sequence_of_states = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward, "red")            
 
-            #reset weights of regressor to theta*
+            #print(best_sequence_of_states)
+            #print(best_sequence_of_actions)
+            if not np.isfinite(best_sequence_of_states).all():
+                print("Uh oh")
+                #IPython.embed()
+            # #reset weights of regressor to theta*
+            thetaCurrent = self.model.regressor.get_params()
             self.model.regressor.set_params(thetaStar)
             # For debugging only: get best action for theta* and also plot it
-            optimal_action_test, curr_line_segment_test, old_curr_forward_test, info_for_saving_test, best_sequence_of_actions_test, best_sequence_of_states_test = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action_before), curr_line_segment_before, old_curr_forward_before, "green")          
+            optimal_action_test, curr_line_segment_test, old_curr_forward_test, info_for_saving_test, best_sequence_of_actions_test, best_sequence_of_states_test = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action_before), curr_line_segment_before, old_curr_forward_before, "green")
 
             ########################
             ######## SAVING ########

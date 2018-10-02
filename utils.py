@@ -6,6 +6,7 @@ import numpy as np
 import IPython
 import os
 import pickle
+from random import shuffle
 
 def getDataFromDisk(experiment_type, use_one_hot, use_camera, cheaty_training, state_representation, agg_itr_counter, config_training):
 
@@ -85,8 +86,11 @@ def whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr_counter
     else:
 
       ######LOCATION OF ON-POLICY DATA
-      data_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all"
-      surface_types = ["turf", "carpet", "styrofoam"] #####, "gravel"] ####################### TO DO: we don't have gravel on-policy data yet
+      if (agg_itr_counter == 1):
+        data_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False"
+      else:
+        data_path = "" #/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.9"
+      surface_types = ["turf", "carpet", "styrofoam"]
 
       #######GET FILENAMES FROM THAT DIRECTORY
       path_lsts = {"turf": [], "carpet":[], "styrofoam": [], "gravel": []} 
@@ -97,6 +101,10 @@ def whichFiles(experiment_type, max_runs_per_surface, task_list, agg_itr_counter
         directory_path = os.path.join(data_path, surface)
         directory_path = os.path.join(directory_path, "saved_rollouts")
         dirs = os.listdir(directory_path)
+
+        #shuffle the list of directories, so its not organized by s/l/r/z/f/etc. (otherwise validation will only be on z, and training will never see z)
+          #listdir already gives you the names in arbitrary order, but do it anyway
+        shuffle(dirs)
 
         for directory in dirs:  
           which_agg_iter = directory.split("_aggIter")[1]

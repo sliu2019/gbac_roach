@@ -362,7 +362,7 @@ class NaiveMPCController(Policy, Serializable):
         ########################################
         #### pick best one 
         ########################################
-        print(scores[:15])
+        #print(scores[:15])
         best_score = np.min(scores)
         best_sim_number = np.argmin(scores) 
         best_sequence_of_actions = all_samples[:,best_sim_number,:]
@@ -396,7 +396,7 @@ class NaiveMPCController(Policy, Serializable):
             markerArray = MarkerArray()
             marker_id=0
 
-            print("rviz red dot state shape: ", best_sequence_of_states[0, :].shape)
+            #print("rviz red dot state shape: ", best_sequence_of_states[0, :].shape)
             for marker_num in range(resulting_states.shape[0]):
                 marker = Marker()
                 marker.id=marker_id
@@ -423,7 +423,7 @@ class NaiveMPCController(Policy, Serializable):
                 marker_id+=1
             self.publish_markers.publish(markerArray)
 
-            if color == "red":
+            if color == "blue":
                 # sample random resulting state sequences
                 samples = np.random.randint(0, resulting_states.shape[1], size=7)
                 #IPython.embed() #what size?

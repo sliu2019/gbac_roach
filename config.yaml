@@ -8,7 +8,6 @@ training:
     update_batch_size: 16                # Number of data points per inner-update ("K" in k-shot learning)
     meta_lr: 0.001                       # Meta learning rate
     update_lr: 2.0                      # Inner-update learning rate
-    meta_learn_lr: False                  # True if learning the ULR for each weight and bias
     num_updates: 3                       # Number of inner updates
     num_extra: 5                          # Should maybe depend on num_sgd_steps: the number to extend k by (aka increase update batch size)
     num_sgd_steps: 2                    # The number of gradient steps to take in a single "inner update"; the steps are taken on a sliding window of the training data
@@ -34,10 +33,11 @@ aggregation:
     curr_agg_iter: 0                    # which aggregation iteration you're on (model0 results in runs0, then on iter 1 you load in runs0 to train model1 and then execute it to get runs1)
     #agg_datapaths:                      # List of saved_rollout folders from on-policy runs
     #    -"/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Wednesday_optimization/ulr_5_num_update_1/_ubs_8_ulr_2.0num_updates1_layers_1_x100_task_list_all/carpet/saved_rollouts"
+    ratio_new: 0.9                      # The ratio of on pol to off pol. If None, that means a straightforward concatenation of off and on pol
 
 roach:
     frequency_value: 10
-    serial_port: '/dev/ttyUSB1'
+    serial_port: '/dev/ttyUSB0'
     baud_rate: 57600
     visualize_rviz: True
     x_index: 0
@@ -84,9 +84,9 @@ policy:
     n_candidates: 2000                   # Number of candidates actions when performing MPC
     horizon: 5                          # Horizon of the planning in the MPC
     test_regressor: False
-    horiz_penalty_factor: 40
+    horiz_penalty_factor: 50
     backward_discouragement: 10
-    heading_penalty_factor: 10      #40,10,30 turf right... 50,10,5 sty left... 40,10,5 everything else
+    heading_penalty_factor: 5      #40,10,10 zigzag, everything else is 50,10,5 ################# 50, 5, 15 for front r leg missing
 
 testing:
     animated: False                       # If True, renders the test rollouts

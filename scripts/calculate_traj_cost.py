@@ -5,49 +5,48 @@ from moving_distance import moving_distance
 import yaml
 
 
-def main():
+def main(traj_save_path):
 
 	################################################################
 	###################### VARS TO SPECIFY #########################
+	traj_save_path = ['straight0_aggIter0','straight1_aggIter0', 'straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0']
+	#traj_save_path = ['straight5_aggIter0','straight6_aggIter0','straight7_aggIter0','straight8_aggIter0','straight9_aggIter0']
+	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0','straight3_aggIter0','straight4_aggIter0', 'straight5_aggIter0', 'straight6_aggIter0', 'straight7_aggIter0']
+
+	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0', 'straight5_aggIter0']
+	#traj_save_path = ['straight5_aggIter0', 'straight6_aggIter0', 'straight7_aggIter0', 'straight8_aggIter0', 'straight9_aggIter0']
+	#traj_save_path = ['left0_aggIter0', 'left1_aggIter0']
+	
+	#traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0']
+	#traj_save_path = ['circle0_aggIter0']
+	
+	#traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0', 'right3_aggIter0','right4_aggIter0']
+	#traj_save_path = ['zigzag0_aggIter0','zigzag1_aggIter0','zigzag2_aggIter0','zigzag3_aggIter0','zigzag4_aggIter0', 'zigzag5_aggIter0', 'zigzag6_aggIter0', 'zigzag7_aggIter0', 'zigzag8_aggIter0', 'zigzag9_aggIter0']
+	#traj_save_path = ['zigzag0_aggIter0','zigzag1_aggIter0','zigzag2_aggIter0','zigzag3_aggIter0','zigzag4_aggIter0']
+	
+	#traj_save_path = ['zigzag10_aggIter0','zigzag11_aggIter0','zigzag12_aggIter0','zigzag13_aggIter0','zigzag14_aggIter0']
+
+	#traj_save_path = ['zigzag0_aggIter0','zigzag1_aggIter0']
+	
+	#traj_save_path = ['figure80_aggIter0', 'figure81_aggIter0', 'figure82_aggIter0']
+	#traj_save_path = ['figure80_aggIter0', 'figure81_aggIter0', 'figure82_aggIter0', 'figure83_aggIter0', 'figure84_aggIter0']
+
+	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0']
+	#traj_save_path = ['snake0_aggIter0','snake1_aggIter0', 'snake2_aggIter0', 'snake3_aggIter0', 'snake4_aggIter0']
 
 	is_diffDrive = False
 
-	#run_1: gravel model on gravel
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Tuesday_optimization/_ubs_8_ulr_0.1num_updates1_layers_2_x500_task_list_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001/carpet/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Sunday_favorites/_ubs_16_ulr_0.01num_updates1_layers_1_x400_task_list_all_mlr_0.001_mbs_64/styrofoam/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_30_optimization/_ubs_16_ulr_0.5num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_0/styrofoam/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Wednesday_optimization/_ubs_16_ulr_1.0num_updates1_layers_2_x500_task_list_styrofoam_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001/styrofoam/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_31_optimization/_ubs_23_ulr_2.0num_updates3_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet_long_trajectory/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_31_optimization/_ubs_23_ulr_2.0num_updates3_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet_momentum/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_31_optimization/_ubs_16_ulr_0.1num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_31_optimization/_ubs_23_ulr_2.0num_updates3_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/styrofoam_momentum_continual/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_4_optimization/_ubs_23_ulr_3.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/turf/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_4_optimization/_ubs_23_ulr_3.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/turf/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet/saved_rollouts"
-
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet/saved_rollouts"
-	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet/saved_rollouts"
-	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_5_anusha/trythese/_ubs_23_ulr_2.0num_updates2_layers_2_x500_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_learninnerloss_True_usingULR0.1/carpet/saved_rollouts"
-
-	traj_save_path = ['zigzag1_aggIter0']
-	#traj_save_path = ['straight0_aggIter0']
-	#traj_save_path = ['zigzag0', 'zigzag1', 'zigzag2', 'zigzag3', 'zigzag4']
-	#traj_save_path = ['left0_aggIter0', 'left1_aggIter0', 'left2_aggIter0'] #'left3_aggIter0', 'left4_aggIter0', 'left5_aggIter0'
-	#traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0', 'left3_aggIter0']
-	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0', 'straight2_aggIter0', 'straight3_aggIter0']
-	#traj_save_path = ['straight3_aggIter0','straight4_aggIter0', 'straight5_aggIter0']
-	#traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0']
-	#traj_save_path = ['right9_aggIter0','right10_aggIter0', 'right11_aggIter0', 'right12_aggIter0']
+	#gbac agg1
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.9/rand/saved_rollouts"
 	
-	#traj_save_path = ['left7_aggIter0','left8_aggIter0', 'left9_aggIter0']
-	#traj_save_path = ['right0_aggIter0','right1_aggIter0']
+	#gbac agg0
+	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift/saved_rollouts"
 	
-	#traj_save_path=['straight0_aggIter1','straight1_aggIter1', 'straight2_aggIter1', 'straight3_aggIter1', 'straight4_aggIter1']
-	#traj_save_path = ['left9_aggIter0','left10_aggIter0', 'left11_aggIter0']
-	#traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0']
-	#traj_save_path = ['right6_aggIter0']
-	#traj_save_path = ['uturn0_aggIter0','uturn1_aggIter0','uturn2_aggIter0']
-	#traj_save_path = ['uturn0_aggIter0']
+	#nongbac agg0
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift_dyneval/saved_rollouts"
+
+	#14.2 grams weight on the shell
+	#5 cubes of foam on each corner, except 4 on the bottom right. For the shell shifting
 
 	################################################################
 	################################################################
@@ -123,7 +122,7 @@ def main():
 			plt.ylim((min(traj_taken[:,1])-0.5, max(traj_taken[:,1])+1))
 		plt.plot(traj_taken[:,0], traj_taken[:,1])
 		plt.savefig(rollouts_path + "/" + traj_path + "/x_y_visualization.png")
-		plt.show()
+		#plt.show()
 		plt.clf()
 
 	print()
@@ -139,4 +138,20 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    #main()
+	'''traj_save_path = ['figure80_aggIter0', 'figure81_aggIter0', 'figure82_aggIter0', 'figure83_aggIter0', 'figure84_aggIter0']
+	main(traj_save_path)
+	traj_save_path = ['zigzag0_aggIter0', 'zigzag1_aggIter0', 'zigzag2_aggIter0', 'zigzag3_aggIter0', 'zigzag4_aggIter0']
+	main(traj_save_path)
+	
+	traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0','left3_aggIter0','left4_aggIter0']#,
+	main(traj_save_path)
+	
+	traj_save_path = ['straight0_aggIter0','straight3_aggIter0','straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0']
+	main(traj_save_path)
+	
+	traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0', 'right3_aggIter0','right4_aggIter0']
+	main(traj_save_path)'''
+
+	traj_save_path = ['straight0_aggIter0','straight3_aggIter0','straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0']
+	main(traj_save_path)

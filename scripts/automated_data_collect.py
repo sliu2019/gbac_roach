@@ -30,6 +30,9 @@ import pickle
 from scipy.misc import imresize
 import cv2
 
+#rosrun joy joy_node
+#python mjo.py
+
 #add nn_dynamics_roach to sys.path
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -38,24 +41,27 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import command
 import shared_multi as shared
 from velociroach import *
-from nn_dynamics_roach.msg import velroach_msg
-from live_camera.msg import camera_message
+from gbac_roach.msg import velroach_msg
+from gbac_roach.msg import camera_message
 from utils import *
+from roach_utils import *
 
 ###############################
 ####### VARS TO SPECIFY #######
 ###############################
 
-task_type='gravel'
+save_rollout = False 
+
+task_type='junk_david'
 serial_port = '/dev/ttyUSB0'
-num_rollouts = 5
-rollout_length= 50
-use_camera = True
+num_rollouts = 1 ####5
+rollout_length= 150
+use_camera = False #True
 left_verify = False
 
 use_pid_mode = True
 slow_pid_mode = True
-use_joystick= False
+use_joystick= True ##False
 print_frequency = 10
 baud_rate = 57600
 DEFAULT_ADDRS = ['\x00\x01']
@@ -325,8 +331,9 @@ def run(run_num):
       if(got_data):
         robot_info = velroach_msg()
         robot_info.stamp = rospy.Time.now()
-        robot_info.curLeft = selected_action[0]
-        robot_info.curRight = selected_action[1]
+        print(robot_info.curLeft, robot_info.curRight)
+        robot_info.curLeft = abs(int(selected_action[0]))
+        robot_info.curRight = abs(int(selected_action[1]))
         robot_info.posL = d[2]
         robot_info.posR = d[3]
         robot_info.gyroX = d[8]
@@ -454,12 +461,14 @@ def run(run_num):
     ##### SAVE ROLLOUT #####
     ########################
 
-    robot_file=data_dir + "/" + str(run_num) + '_robot_info.obj'
-    mocap_file=data_dir + "/" + str(run_num) + '_mocap_info.obj'
-    image_file = data_dir + "/" + str(run_num) + '_image_info.obj' 
+    if(save_rollout):
 
-    pickle.dump(list_robot_info,open(robot_file,'w')) 
-    pickle.dump(list_mocap_info,open(mocap_file,'w'))
+      robot_file=data_dir + "/" + str(run_num) + '_robot_info.obj'
+      mocap_file=data_dir + "/" + str(run_num) + '_mocap_info.obj'
+      image_file = data_dir + "/" + str(run_num) + '_image_info.obj' 
+
+      pickle.dump(list_robot_info,open(robot_file,'w')) 
+      pickle.dump(list_mocap_info,open(mocap_file,'w'))
     
     
     #num_run += 1
@@ -471,7 +480,7 @@ def run(run_num):
   stop_roach(lock, robots, use_pid_mode)
   print 'COMPLETE ROLLOUT ', run_num, '\n\n'
 
-  if not reset:
+  '''if not reset:
     pickle.dump(list_image_info,open(image_file,'w'))
     image_dir = data_dir + "/" + str(run_num) + "_images"
     if not os.path.exists(image_dir):
@@ -481,7 +490,8 @@ def run(run_num):
       #print(test_filename)
       cv2.imwrite(test_filename, list_image_info[i])
 
-  return reset
+  return reset'''
+  return 0
 
 
 ##########################
