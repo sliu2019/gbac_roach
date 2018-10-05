@@ -20,3 +20,10 @@ The starter code was based on an implementation of Q-learning for Atari generous
 
 
 The only files you need to modify are launch_maml_train.py.
+
+Overview of the files;
+launch_maml_train.py: both trains and tests models 
+
+
+
+# Talk about what the directory structure of the data folders and trained model folders should be, and maybe include one as a sample

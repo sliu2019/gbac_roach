@@ -1,4 +1,3 @@
-#fine
 import os.path as osp
 import os
 import sys
@@ -14,7 +13,8 @@ import threading
 import multiprocessing
 import matplotlib.pyplot as plt
 import copy 
-#mine
+
+# Our utilities
 from gbac_roach.msg import velroach_msg
 from utils import *
 from roach_utils import *
@@ -58,59 +58,17 @@ def run(d):
 
     learn_loss_weighting=False
 
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Tuesday_optimization/_ubs_8_ulr_0.1num_updates1_layers_2_x500_task_list_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001/model_aggIter0_epoch25"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Tuesday_optimization/_ubs_8_ulr_0.1num_updates1_layers_2_x500_task_list_styrofoam_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001/model_aggIter0_epoch25"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Wednesday_optimization/_ubs_16_ulr_0.0num_updates1_layers_2_x500_task_list_styrofoam_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_xavier_bias/model_aggIter0_epoch45"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Wednesday_optimization/_ubs_16_ulr_1.0num_updates1_layers_2_x500_task_list_styrofoam_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001/model_aggIter0_epoch25"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Wednesday_optimization/_ubs_16_ulr_0.5num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001/model_aggIter0_epoch45"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/Thursday_optimization/random_model/model_weight_inialization"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_30_optimization/_ubs_16_ulr_0.5num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_0/model_aggIter0_epoch35"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_31_optimization/_ubs_23_ulr_2.0num_updates3_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch35"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/8_31_optimization/_ubs_16_ulr_0.1num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch35"
-    
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch35"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch35"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/turf/model_aggIter1_epoch45"
-    ##previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/agg_0.9/model_aggIter1_epoch5"
-    ##previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch35"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch35"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_4_optimization/_ubs_23_ulr_3.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch25"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_4_optimization/_ubs_23_ulr_1.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/model_aggIter0_epoch25"
+    previous_dynamics_model = d["previous_dynamics_model"]
 
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_5_anusha/trythese/_ubs_23_ulr_2.0num_updates2_layers_2_x500_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_learninnerloss_True_usingULR0.1/model_aggIter0_epoch45"
-    #previous_dynamics_model = '/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_5_optimization/_ubs_23_ulr_0.1num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_100_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_True/model_aggIter0_epoch5'
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_5_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_True/model_aggIter0_epoch45"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_5_optimization/_ubs_23_ulr_0.1num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_True/model_aggIter0_epoch45"
-
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_6_optimization/_ubs_23_ulr_2num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_learnlossweighting_True/model_aggIter0_epoch45"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_None/model_aggIter1_epoch45"
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter1_epoch25"
-
-    ########################################################################
-
-    ##### TO DO: add here where to get the rand and the onpol rollouts from (for training data)
-
-    #aggiter0 for GBAC
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
-
-    #aggiter1 for GBAC
-    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.5/model_aggIter1_epoch23"
-
-    #aggiter0 for NONGBAC
-    previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
-
-    ########################################################################
-    
-    desired_shape_for_rollout = "straight"                     #straight, left, right, circle_left, zigzag, figure8
-    save_rollout_run_num = 3
-    rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
-
-    num_steps_per_rollout= 100  #150 turf right... 80 for straight, 270 for multi_terrain uturn......... 150 for slopes
-    if (desired_shape_for_rollout=="figure8"):
-        num_steps_per_rollout= 150 ###400
-    elif (desired_shape_for_rollout=="zigzag"):
-        num_steps_per_rollout= 150
+    desired_shape_for_rollout = d["trajectory"]                    #straight, left, right, circle_left, zigzag, figure8
+    if d["custom_rollout_foldername"]:
+        rollout_save_filename= d["custom_rollout_foldername"]
+    else:
+        # find next highest
+        IPython.embed()
+        pass
+    num_steps_per_rollout= d["num_steps_per_rollout"]
+   
     #settings
     cheaty_training = False
     use_one_hot = False #True
@@ -119,7 +77,7 @@ def run(d):
     
     state_representation = "exclude_x_y" #["exclude_x_y", "all"]
 
-    #don't change much
+    # Settings (generally, keep these to default)
     default_addrs= [b'\x00\x01']
     use_pid_mode = True      
     slow_pid_mode = True
@@ -136,11 +94,11 @@ def run(d):
     if(make_training_dataset_noisy):
         noiseToSignal = 0.01
 
-    #datatypes
+    # Defining datatypes
     tf_datatype= tf.float32
     np_datatype= np.float32
 
-    #motor limits
+    # Setting motor limits
     left_min = 1200
     right_min = 1200
     left_max = 2000
@@ -160,9 +118,7 @@ def run(d):
     #vars from config
     config = d['config']
     curr_agg_iter = config['aggregation']['curr_agg_iter']
-    #save_dir = '/media/anagabandi/f1e71f04-dc4b-4434-ae4c-fcb16447d5b3/' + d['exp_name'] 
-    #save_dir = '/home/anagabandi/rllab-private/data/local/experiment/' + d['exp_name']
-    save_dir = d['exp_name']
+    save_dir = d['save_dir']
     print("\n\nSAVING EVERYTHING TO: ", save_dir)
 
     #make directories
@@ -558,112 +514,100 @@ def run(d):
 
     return
 
-def main(config_path, extra_config):
+def deep_dict_merge(x, y):
+    for k, v in y.items():
+        if k in x:
+            # Dictionary
+            if type(v) is dict:
+                for k2, v2 in v.items():
+                    if k2 in x[k]:
+                        x[k][k2] = v2
+            # Value
+            else:
+                x[k] = v
+    return x
+
+def main(args):
 
     #################################
     ## INIT config and vars
     #################################
 
-    #read in config vars
-    config = yaml.load(open(config_path))
-    config = replace_in_dict(config, extra_config)
+    # Read in default config and edit as necessary 
+    default_config_path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'config.yaml')
+    config = yaml.load(open(default_config_path))
 
+    if not args["train"]:
+        traintime_config = yaml.load(open(osp.join(args["model_path"], "saved_config.yaml")))
+        config = deep_dict_merge(config, traintime_config) # merges traintime_config into config
+
+    #IPython.embed()
     vg = VariantGenerator()
     vg.add('config', [config])
-    ##vg.add('batch_size', [2000]) ######### to do: use this to decide how much data to read in from disk
-
-    ########################
-    #### ANUSHA
-
-    vg.add('meta_batch_size', [64]) ######### 64
-    vg.add('meta_lr', [0.001])
-    vg.add('update_batch_size', [23]) #[8, 4, 16, 20]
-
-    vg.add('max_runs_per_surface', [5]) #396
-    vg.add('num_updates', [1]) 
-    vg.add('update_lr', [0.1]) #[0.1, 1.0, 0.01]
-        # in learn_inner_loss = True, then it seems like this being large is unstable when learning these
-            #confirmed that if trainable=False on these though, then ulr=2 is same for learn_inner_loss True and learn_inner_loss False (this is just a sanity check)
-        # this should be 2 for learn_inner_loss = False
-        # this should be 0.1 for learn_inner_loss = True
     
-    
-    vg.add("task_list", [["turf", "styrofoam", "carpet"]]) #"all"
-    vg.add('max_epochs', [50]) 
-    vg.add('num_sgd_steps', [1]) #[1, 5, 10]
+    if args["train"]:
+        vg.add('meta_batch_size', [64]) ######### 64
+        vg.add('meta_lr', [0.001])
+        vg.add('update_batch_size', [23]) #[8, 4, 16, 20]
 
-    # Aggregation
-    vg.add('ratio_new', [0.9])
-    vg.add('curr_agg_iter', [0]) #0, 1, 2, etc
+        vg.add('max_runs_per_surface', [5]) #396
+        vg.add('num_updates', [1]) 
+        vg.add('update_lr', [0.1]) #[0.1, 1.0, 0.01]
+            # in learn_inner_loss = True, then it seems like this being large is unstable when learning these
+                #confirmed that if trainable=False on these though, then ulr=2 is same for learn_inner_loss True and learn_inner_loss False (this is just a sanity check)
+            # this should be 2 for learn_inner_loss = False
+            # this should be 0.1 for learn_inner_lsos = True
+        
+        
+        vg.add("task_list", [["turf", "styrofoam", "carpet"]]) #"all"
+        vg.add('max_epochs', [50]) 
+        vg.add('num_sgd_steps', [1]) #[1, 5, 10]
 
-    # Misc
-    vg.add('horizon', [5]) #5, 10
-    vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True ##################################################
-    vg.add('seed', [0]) 
-    vg.add('nonlinearity', ['relu'])
-    if config['training']['use_reg']:
-        vg.add('regularization_weight', [0.001]) #[0.001, 0.0], may need to be bigger since the number of scalar weights has increased
-    vg.add('use_clip', [True])
-    vg.add("weight_initializer", ["xavier"])
-    vg.add("dim_hidden", [[500, 500]]) #[500,500]
-    vg.add('num_extra', [7]) # Is this useful?
-    vg.add('optimizer', ["adam"])
-    vg.add('dim_bias', [5])
-    vg.add('use_momentum', [False])
-    vg.add('learn_inner_loss', [False]) 
-    ########################
+        # Aggregation
+        vg.add('ratio_new', [0.9])
+        vg.add('curr_agg_iter', [0]) #0, 1, 2, etc
 
-    #training vars
-    '''vg.add('meta_batch_size', [64]) #1300 #################
-    vg.add('meta_lr', [0.001]) #usually 0.001, [0.001, 0.01]
-    vg.add('update_batch_size', [16]) #############
-    vg.add('update_lr', [0.01]) #[1.0, 0.1]############ 2 for the adaptation model, 0 for the NON_GBAC one
-    vg.add('num_updates', [1]) #2
-    vg.add('max_epochs', [30])
-
-    #don't really change
-    vg.add('horizon', [5])
-    vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True
-    vg.add('seed', [0]) 
-    vg.add('nonlinearity', ['relu'])
-    if config['training']['use_reg']:
-        vg.add('regularization_weight', [0.002]) #no reg for carp on carp: 0.000000001
-    vg.add('use_clip', [True])
-    vg.add("weight_initializer", ["truncated_normal"])
-    vg.add("dim_hidden", [[400]])
-
-    #the data that gets read in
-    vg.add("task_list", [["all"]])
-    vg.add('max_runs_per_surface', [5]) #396, 5
-    vg.add('curr_agg_iter', [0])'''
-
-
+        # Misc
+        vg.add('horizon', [5]) #5, 10
+        vg.add('use_reg', [True]) # This only changes the save filename! The config.yaml var needs to agree with this one if True ##################################################
+        vg.add('seed', [0]) 
+        vg.add('nonlinearity', ['relu'])
+        if config['training']['use_reg']:
+            vg.add('regularization_weight', [0.001]) #[0.001, 0.0], may need to be bigger since the number of scalar weights has increased
+        vg.add('use_clip', [True])
+        vg.add("weight_initializer", ["xavier"])
+        vg.add("dim_hidden", [[500, 500]]) #[500,500]
+        vg.add('num_extra', [7]) # Is this useful?
+        vg.add('optimizer', ["adam"])
+        vg.add('dim_bias', [5])
+        vg.add('use_momentum', [False])
+        vg.add('learn_inner_loss', [False]) 
+        
     ##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
     for v in vg.variants():
 
         time.sleep(1.)
 
-        _v = v.copy(); del _v['config'], _v['_hidden_keys']
-        v['config'] = replace_in_dict(v['config'], _v)
+        if args["train"]:
+            _v = v.copy(); del _v['config'], _v['_hidden_keys']
+            v['config'] = replace_in_dict(v['config'], _v) # Makes a flat dictionary into a hierarchical dictionary (dict of dicts)
 
-        ##################################################
+        v["save_dir"] = args["model_path"]
+        if not args["train"]:
+            # If testing, you can specify a rollout group
+            if args["rollout_group"]:
+                v["save_dir"] = osp.join(args["model_path"], args["rollout_group"]) 
 
-        #gbac model, aggiter1 training
-        #v['exp_name'] = "MAML_roach/9_14_optimization/discard_weight_viewing"
-
-        #v['exp_name'] = "MAML_roach/9_14_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list']) + "_mlr_" + str(v['config']['training']['meta_lr']) + "_mbs_" + str(v['config']['testing']['meta_batch_size']) + "_num-sgd-steps_" + str(v['config']['training']['num_sgd_steps']) + '_reg_weight_' + str(v['config']['training']['regularization_weight']) + "_dim_bias_" + str(v['config']['model']['dim_bias']) + "_metatrain_lr_" + str(v['config']['training']['learn_inner_loss']) + "_agg_" + str(v['config']['aggregation']['ratio_new']) + "_iter1trainedFromScratch_randomAndNewData" #"iter1TrainOnOnlyNewData"#"iter0ForComparison" #"_iter1trainedFromScratch_randomAndNewData"
-
-        #gbac model, aggiter2 (to do... others in 9_8)
-        #v['exp_name'] = "MAML_roach/9_11_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list']) + "_mlr_" + str(v['config']['training']['meta_lr']) + "_mbs_" + str(v['config']['testing']['meta_batch_size']) + "_num-sgd-steps_" + str(v['config']['training']['num_sgd_steps']) + '_reg_weight_' + str(v['config']['training']['regularization_weight']) + "_dim_bias_" + str(v['config']['model']['dim_bias']) + "_metatrain_lr_" + str(v['config']['training']['learn_inner_loss']) + "_agg_0.9_0.9_Anusha"
-
-        #nongbac model, aggiter0, for training
-        #v['exp_name'] = "MAML_roach/9_11_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list']) + "_mlr_" + str(v['config']['training']['meta_lr']) + "_mbs_" + str(v['config']['testing']['meta_batch_size']) + "_num-sgd-steps_" + str(v['config']['training']['num_sgd_steps']) + '_reg_weight_' + str(v['config']['training']['regularization_weight']) + "_dim_bias_" + str(v['config']['model']['dim_bias']) + "_metatrain_lr_" + str(v['config']['training']['learn_inner_loss'])
-
-
+        # If not testing, the below has no meaning. 
+        v["previous_dynamics_model"] = osp.join(args["model_path"], args["model_name"])
+        v["trajectory"] = args["trajectory"]
+        v["num_steps_per_rollout"] = args["num_steps_per_rollout"]
+        v["custom_rollout_foldername"] = args["custom_rollout_foldername"]
+        v["dynamic_evaluation"] = args[dynamic_evaluation]
         ###########################
 
         #nongbac model, aggiter0, for testing
-        v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper_dyneval"
+        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper_dyneval"
 
         #gbac model, aggiter0, for testing
         #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper"
@@ -673,29 +617,7 @@ def main(config_path, extra_config):
 
 
         ##################################################
-
-        #v["exp_name"] = "MAML_roach/9_2_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/styrofoam"
-        #v['exp_name'] = "MAML_roach/9_2_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet"
-
-        #v['exp_name'] = "MAML_roach/9_4_optimization/_ubs_23_ulr_3.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet"
-        #v['exp_name'] = 'MAML_roach/9_4_optimization/_ubs_23_ulr_1.0num_updates1_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/turf'
-
-        #v['exp_name'] = "MAML_roach/9_5_anusha/trythese/_ubs_23_ulr_2.0num_updates2_layers_2_x500_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_learninnerloss_True_usingULR0.1/carpet"
-                                 
-        #v['exp_name'] = "MAML_roach/9_5_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_True/carpet"
-        #v['exp_name'] = "MAML_roach/9_5_optimization/_ubs_23_ulr_0.1num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_True/styrofoam_controller_param_search"
-
-        #v['exp_name'] = 'MAML_roach/9_6_optimization/_ubs_23_ulr_1num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_learnlossweighting_True_2/carpet'
-
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/agg_0.9"
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/carpet"
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/agg_0.9/carpet"
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_2_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_all_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5/carpet"
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.9/turf"
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_None/styrofoam"
-
-
-
+        # Runs function run() and passes it the dictionary "v"
         run_experiment_lite(
             run,
             sync_s3_pkl=True,
@@ -713,38 +635,24 @@ def main(config_path, extra_config):
         )
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
+    ################################################################
+    #################### Fill out the below ########################
+    ################################################################
+    args = {}
     
-    #TRAIN TIME
-    default_path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'config.yaml')
-    
-    #TEST TIME
-    #default_path = '/home/anagabandi/rllab-private/data/local/experiment/MAML_roach_copy/Monday_favorites/all_terrain/saved_config.yaml'
+    args["train"] = False # True if training, false if testing
+    # Model path: if testing, will save rollouts here. If training, will save trained models here. 
+    args["model_path"] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False"
 
-    parser.add_argument('-p', '--config_path', type=str, default=default_path,
-                  help='directory for the config yaml file.')
-    parser.add_argument('-c', '--config', type=dict, default=dict())
-    args = parser.parse_args()
-    main(config_path=args.config_path, extra_config=args.config)
+    # If testing, also fill these out:
+    args["rollout_group"] = "random_crap" # Saves rollout folder at model_path/rollout_group/"saved_rollouts"/custom_rollout_foldername
+    args["model_name"] = "model_aggIter0_epoch45" # Choose an epoch and an aggregation iteration among the models under model_path
 
-"""/home/anagabandi/rllab-private/data/local/experiment//home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/turf/model_aggIter1_epoch30'"""
+    args["trajectory"] = "straight" # The alias of the trajectory
+    args["num_steps_per_rollout"] = 135 
+    args["custom_rollout_foldername"] = None # Default: trajectory + str(smallest available integer)
 
-'''for k in range(dataX_curr[0][0].shape[1]):
-    print("ELEMENT: ", k)
-    all_min_for_this_elem=[]
-    all_max_for_this_elem=[]
-    for rollout in range(len(dataX_curr[0])):
-        all_min_for_this_elem.append(np.min(dataX_curr[0][rollout][:,k]))
-        all_max_for_this_elem.append(np.max(dataX_curr[0][rollout][:,k]))
-    print("min: ", np.min(all_min_for_this_elem))
-    print("max: ", np.min(all_max_for_this_elem))
+    args["dynamic_evaluation"] = False 
+    ################################################################
 
-
-counter=0
-for rollout in range(len(dataX_curr[0])):
-    val=dataX_curr[0][rollout][:,4]
-    if(np.any(val<0)):
-        counter+=1
-        print(val)
-        print(rollout)
-    print(counter)'''
+    main(args)
