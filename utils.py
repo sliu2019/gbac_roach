@@ -438,3 +438,14 @@ def rollout_to_states(robot_info, mocap_info, state_representation):
 			old_al=copy.deepcopy(al)
 			old_ar=copy.deepcopy(ar)
 	return np.array(list_states), np.array(list_actions)
+
+
+def recursive_dict_merge(main_dict, additional_dict):
+  for s_k, s_v in additional_dict.items():
+    if s_k in main_dict:
+      if type(s_v) == dict:
+        # Recursive, in case saved_config contains fewer params than config
+        main_dict[s_k] = recursive_dict_merge(main_dict[s_k], s_v)
+      else:
+        main_dict[s_k] = s_v
+  return main_dict

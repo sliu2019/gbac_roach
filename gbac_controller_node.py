@@ -38,12 +38,9 @@ class GBAC_Controller(object):
             default_addrs= None,
             update_batch_size= 0,
             num_updates=1,
-            #anything after this is unused by this code
+            de=False,
             x_index= 0,
-            y_index= 1,
-            yaw_cos_index= 10,
-            yaw_sin_index= 11,
-            visualize_rviz= True,
+            y_index= 1
     ):
         self.sess = sess
         self.policy = policy
@@ -56,6 +53,7 @@ class GBAC_Controller(object):
         self.default_addrs = default_addrs
         self.update_batch_size = update_batch_size
         self.num_updates = num_updates
+        self.de = de
 
         self.lock = Condition()
         self.mocap_info = PoseStamped()
@@ -253,7 +251,6 @@ class GBAC_Controller(object):
             ########################
             ### UPDATE REGRESSOR ###
             ########################
-            #print(self.sess.run(self.model.update_lr))
             # get the past K points (s,a,ds)
             length= len(self.traj_taken)
             K = self.update_batch_size
@@ -271,15 +268,6 @@ class GBAC_Controller(object):
                         list_of_s.append(s)
                         list_of_a.append(a)
                         list_of_ds.append(ds)
-
-                    # count = 0
-                    # for j in range(K-(length-1)):
-                    #     list_of_s.append(list_of_s[i])
-                    #     list_of_a.append(list_of_a[i])
-                    #     list_of_ds.append(list_of_ds[i])
-                    #     count+=1
-                    #     if count >= (length-1):
-                    #         count = 0
 
                     for j in range(K-(length-1)):
                         list_of_s.append(s)
@@ -300,18 +288,13 @@ class GBAC_Controller(object):
                 list_of_a= np.array(list_of_a)
                 list_of_ds= np.array(list_of_ds)
 
-                #to do: speed this section up by doing fewer conversions/list-making
-                # Couldn't you use numpy and vector operations to parallelize
-
                 #organize the points into what the regressor wants
                 k_labels = (list_of_ds).reshape(1, K, -1)
                 k_inputs = np.concatenate([list_of_s, list_of_a], axis=-1).reshape(1, K, -1)
                 feed_dict = {self.model.inputa: k_inputs, self.model.labela: k_labels}
 
-                #reset weights of regressor to theta*
-                #self.model.regressor.set_params(thetaStar)
-                print("....done resetting to theta*")
-                self.model.regressor.set_params(thetaCurrent)
+                if self.de:
+                    self.model.regressor.set_params(thetaCurrent)
 
                 #take gradient step on theta* using the past K points
                 for _ in range(self.num_updates):
@@ -324,17 +307,16 @@ class GBAC_Controller(object):
             old_curr_forward_before = old_curr_forward
             curr_line_segment_before = curr_line_segment
             optimal_action_before = optimal_action
-            #get the best action
+            # get the best action
             optimal_action, curr_line_segment, old_curr_forward, info_for_saving, best_sequence_of_actions, best_sequence_of_states = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action), curr_line_segment, old_curr_forward, "red")            
 
-            #print(best_sequence_of_states)
-            #print(best_sequence_of_actions)
-            if not np.isfinite(best_sequence_of_states).all():
-                print("Uh oh")
-                #IPython.embed()
-            # #reset weights of regressor to theta*
-            thetaCurrent = self.model.regressor.get_params()
+            # reset weights of regressor to theta*, then visualize the theta* model
+            if self.de: 
+                thetaCurrent = self.model.regressor.get_params()
+            
+            print("....done resetting to theta*")
             self.model.regressor.set_params(thetaStar)
+
             # For debugging only: get best action for theta* and also plot it
             optimal_action_test, curr_line_segment_test, old_curr_forward_test, info_for_saving_test, best_sequence_of_actions_test, best_sequence_of_states_test = self.policy.get_best_action(np.copy(full_curr_state), np.copy(optimal_action_before), curr_line_segment_before, old_curr_forward_before, "green")
 

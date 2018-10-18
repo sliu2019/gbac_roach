@@ -9,7 +9,7 @@ def main(traj_save_path):
 
 	################################################################
 	###################### VARS TO SPECIFY #########################
-	traj_save_path = ['straight0_aggIter0','straight1_aggIter0', 'straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0']
+	traj_save_path = ['straight1_aggIter0']
 	#traj_save_path = ['straight5_aggIter0','straight6_aggIter0','straight7_aggIter0','straight8_aggIter0','straight9_aggIter0']
 	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0','straight3_aggIter0','straight4_aggIter0', 'straight5_aggIter0', 'straight6_aggIter0', 'straight7_aggIter0']
 
@@ -40,7 +40,7 @@ def main(traj_save_path):
 	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.9/rand/saved_rollouts"
 	
 	#gbac agg0
-	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift/saved_rollouts"
+	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift_video/saved_rollouts"
 	
 	#nongbac agg0
 	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift_dyneval/saved_rollouts"

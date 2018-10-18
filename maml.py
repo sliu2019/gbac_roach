@@ -6,24 +6,27 @@ import IPython
 
 
 class MAML:
-    def __init__(self, regressor, dim_input=1, dim_output=1, learn_loss_weighting=False, config={}):
+    def __init__(self, regressor, dim_input, dim_output, learn_loss_weighting, train_config, test_config):
         """ must call construct_model() after initializing MAML! """
+        self.regressor = regressor
+        self.regressor.construct_fc_weights(meta_loss=train_config['meta_loss'])
+        self.forward = self.regressor.forward_fc
+        
         self.dim_input = dim_input
         self.dim_output = dim_output
-        self.update_lr = config['update_lr']
-        self.meta_lr = tf.placeholder_with_default(config['meta_lr'], ())
-        self.num_updates = config['num_updates']
+        
+        self.train_config = train_config
+        self.test_config = test_config
+
+        self.update_lr = test_config['update_lr']
+        self.meta_lr = tf.placeholder_with_default(test_config['meta_lr'], ())
+        self.num_updates = test_config['num_updates']
+        self.num_sgd_steps = test_config['num_sgd_steps']
+        self.k = test_config['update_batch_size']
+        
         self.loss_func = mse
-        self.regressor = regressor
-        self.regressor.construct_fc_weights(meta_loss=config['meta_loss'])
-        self.forward = self.regressor.forward_fc
-        self.config = config
-        self.multistep_loss = config['multistep_loss']
-        self.meta_learn_lr = config['learn_inner_loss']
-        self.regularization_weight = self.config['regularization_weight']
-        self.num_extra = self.config['num_extra']
-        self.num_sgd_steps = self.config['num_sgd_steps']
-        self.k = self.config['update_batch_size']
+        self.meta_learn_lr = train_config['learn_inner_loss']
+        self.regularization_weight = train_config['regularization_weight']
         self.learn_loss_weighting = learn_loss_weighting
         
 
@@ -176,7 +179,7 @@ class MAML:
             out_dtype = [tf.float32, [tf.float32]*num_updates, tf.float32, [tf.float32]*num_updates, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*6]
             ####################out_dtype = [self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, self.regressor.tf_datatype, [self.regressor.tf_datatype]*num_updates, [self.regressor.tf_datatype]*6, self.regressor.tf_datatype, [self.regressor.tf_datatype]*6, [self.regressor.tf_datatype]*6, [self.regressor.tf_datatype]*num_updates]
             #out_dtype = [tf.int32, [tf.int32]*num_updates, tf.int32, [tf.int32]*num_updates, [tf.int32]*7, tf.int32, [tf.int32]*7, [tf.int32]*7]
-            result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=self.config['meta_batch_size'])
+            result = tf.map_fn(task_metalearn, elems=(inputa, inputb, labela, labelb), dtype=out_dtype, parallel_iterations=self.train_config['meta_batch_size'])
 
             #these return values are lists w a different entry for each task...
                 #average over all tasks when doing the outer gradient update (metatrain_op)

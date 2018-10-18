@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(nn_dynamics_roach)
+project(gbac_roach)
 
 
 find_package(catkin REQUIRED COMPONENTS
