@@ -10,9 +10,50 @@ import yaml
 # traj_save_path is a list of folder names, where each folder contains a rollout and is located in the directory specified by rollouts_path.
 # rollouts_path is an absolute path to the directory housing the folders for individual rollouts
 
+
 def main(traj_save_path, rollouts_path):
 
 	is_diffDrive = False
+	################################################################
+	###################### VARS TO SPECIFY #########################
+	traj_save_path = ['straight1_aggIter0']
+	#traj_save_path = ['straight5_aggIter0','straight6_aggIter0','straight7_aggIter0','straight8_aggIter0','straight9_aggIter0']
+	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0','straight3_aggIter0','straight4_aggIter0', 'straight5_aggIter0', 'straight6_aggIter0', 'straight7_aggIter0']
+
+	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0','straight3_aggIter0', 'straight4_aggIter0', 'straight5_aggIter0']
+	#traj_save_path = ['straight5_aggIter0', 'straight6_aggIter0', 'straight7_aggIter0', 'straight8_aggIter0', 'straight9_aggIter0']
+	#traj_save_path = ['left0_aggIter0', 'left1_aggIter0']
+	
+	#traj_save_path = ['left0_aggIter0','left1_aggIter0', 'left2_aggIter0']
+	#traj_save_path = ['circle0_aggIter0']
+	
+	#traj_save_path = ['right0_aggIter0','right1_aggIter0', 'right2_aggIter0', 'right3_aggIter0','right4_aggIter0']
+	#traj_save_path = ['zigzag0_aggIter0','zigzag1_aggIter0','zigzag2_aggIter0','zigzag3_aggIter0','zigzag4_aggIter0', 'zigzag5_aggIter0', 'zigzag6_aggIter0', 'zigzag7_aggIter0', 'zigzag8_aggIter0', 'zigzag9_aggIter0']
+	#traj_save_path = ['zigzag0_aggIter0','zigzag1_aggIter0','zigzag2_aggIter0','zigzag3_aggIter0','zigzag4_aggIter0']
+	
+	#traj_save_path = ['zigzag10_aggIter0','zigzag11_aggIter0','zigzag12_aggIter0','zigzag13_aggIter0','zigzag14_aggIter0']
+
+	#traj_save_path = ['zigzag0_aggIter0','zigzag1_aggIter0']
+	
+	#traj_save_path = ['figure80_aggIter0', 'figure81_aggIter0', 'figure82_aggIter0']
+	#traj_save_path = ['figure80_aggIter0', 'figure81_aggIter0', 'figure82_aggIter0', 'figure83_aggIter0', 'figure84_aggIter0']
+
+	#traj_save_path = ['straight0_aggIter0','straight1_aggIter0','straight2_aggIter0']
+	#traj_save_path = ['snake0_aggIter0','snake1_aggIter0', 'snake2_aggIter0', 'snake3_aggIter0', 'snake4_aggIter0']
+
+	is_diffDrive = False
+
+	#gbac agg1
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.9/rand/saved_rollouts"
+	
+	#gbac agg0
+	rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift_video/saved_rollouts"
+	
+	#nongbac agg0
+	#rollouts_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/shell_shift_dyneval/saved_rollouts"
+
+	#14.2 grams weight on the shell
+	#5 cubes of foam on each corner, except 4 on the bottom right. For the shell shifting
 
 	################################################################
 	################################################################

@@ -3,17 +3,19 @@ seed: 0
 
 experiment_type: 'terrain_types'                      # Name of the task
 
+# If testing, this is the model to load. If training and curr_agg_iter != 0 (in other words, we're aggregating), then this is the model to do additional training on top of. 
+
+previous_dynamics_model: "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
+
+
 training:
     meta_batch_size: 250                   # Number of tasks sampled per meta-update
     update_batch_size: 16                # Number of data points per inner-update ("K" in k-shot learning)
     meta_lr: 0.001                       # Meta learning rate
     update_lr: 2.0                      # Inner-update learning rate
     num_updates: 3                       # Number of inner updates
-    num_extra: 5                          # Should maybe depend on num_sgd_steps: the number to extend k by (aka increase update batch size)
     num_sgd_steps: 2                    # The number of gradient steps to take in a single "inner update"; the steps are taken on a sliding window of the training data
     meta_loss: False                     # If True, learns the loss in the inner-update
-    stop_grad: False                     # If True, do not use second derivatices in the inner-update
-    multistep_loss: False
     steps: 0.001
     training_ratio: 0.9                  # Training/validation split
     use_reg: True                        # If True, regularize the outer loss function
@@ -28,6 +30,27 @@ training:
     use_momentum: True                  # If we're using momentum or not
     momentum: 0.9                       # The momentum parameter for momentum optimizer, usually 0.9
     learn_inner_loss: False
+
+testing:
+    animated: False                       # If True, renders the test rollouts
+    file: '/home/ignasi/data_lta/CRIPPLE/MAML/HalfCheetahEnv__cripple__multi_updates_1__meta_batch_size_32__meta_learn_lr_False__update_batch_size_32__batch_size_2000__num_updates_1__multi_input_0__update_lr_0.001__dim_bias_0__seed_605__metatrain_itr_10/'
+    update_batch_size: 16                 # Number of data points per inner-update ("K" in k-shot learning)
+    meta_lr: 0.001
+    update_lr: 2.0
+    num_updates: 3                       # Number of inner updates
+    num_sgd_steps: 2    
+    
+    max_path_length: 50                 # Max length of rollout
+    num_rollouts: 1                    # Number of rollouts to perform for testing
+    speedup: 1                           # Factor by which to speed-up the rendering of the rollouts
+    dynamic_evaluation: False
+    render:
+        stationary_camera: False
+        xpos: 0
+        ypos: 0
+        width: 1000
+        height: 1000
+        title: 'Test'
 
 aggregation:
     curr_agg_iter: 0                    # which aggregation iteration you're on (model0 results in runs0, then on iter 1 you load in runs0 to train model1 and then execute it to get runs1)
@@ -87,23 +110,3 @@ policy:
     horiz_penalty_factor: 50
     backward_discouragement: 10
     heading_penalty_factor: 5      #40,10,10 zigzag, everything else is 50,10,5 ################# 50, 5, 15 for front r leg missing
-
-testing:
-    animated: False                       # If True, renders the test rollouts
-    file: '/home/ignasi/data_lta/CRIPPLE/MAML/HalfCheetahEnv__cripple__multi_updates_1__meta_batch_size_32__meta_learn_lr_False__update_batch_size_32__batch_size_2000__num_updates_1__multi_input_0__update_lr_0.001__dim_bias_0__seed_605__metatrain_itr_10/'
-    meta_batch_size: 1                  # Number of tasks sampled per meta-update
-    update_batch_size: 16                 # Number of data points per inner-update ("K" in k-shot learning)
-    max_path_length: 50                 # Max length of rollout
-    num_rollouts: 1                    # Number of rollouts to perform for testing
-    speedup: 1                           # Factor by which to speed-up the rendering of the rollouts
-    meta_loss: False                     # If True, learns the loss in the inner-update
-    stop_grad: False                     # If True, do not use second derivatices in the inner-update
-    meta_lr: 0.001
-    update_lr: 2.0
-    render:
-        stationary_camera: False
-        xpos: 0
-        ypos: 0
-        width: 1000
-        height: 1000
-        title: 'Test'

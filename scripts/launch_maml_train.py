@@ -58,17 +58,27 @@ def run(d):
 
     learn_loss_weighting=False
 
-    previous_dynamics_model = d["previous_dynamics_model"]
+    #aggiter0 for GBAC
+    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
 
-    desired_shape_for_rollout = d["trajectory"]                    #straight, left, right, circle_left, zigzag, figure8
-    if d["custom_rollout_foldername"]:
-        rollout_save_filename= d["custom_rollout_foldername"]
-    else:
-        # find next highest
-        IPython.embed()
-        pass
-    num_steps_per_rollout= d["num_steps_per_rollout"]
-   
+    #aggiter1 for GBAC
+    #previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.5/model_aggIter1_epoch23"
+
+    #aggiter0 for NONGBAC
+    previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
+
+    ########################################################################
+    
+    desired_shape_for_rollout = "right"                     #straight, left, right, circle_left, zigzag, figure8
+    save_rollout_run_num = 0
+    rollout_save_filename= desired_shape_for_rollout + str(save_rollout_run_num)
+
+    num_steps_per_rollout= 30  #150 turf right... 80 for straight, 270 for multi_terrain uturn......... 150 for slopes
+    if (desired_shape_for_rollout=="figure8"):
+        num_steps_per_rollout= 150 ###400
+    elif (desired_shape_for_rollout=="zigzag"):
+        num_steps_per_rollout= 150
+
     #settings
     cheaty_training = False
     use_one_hot = False #True
@@ -476,7 +486,7 @@ def run(d):
     #create controller node
     controller_node = GBAC_Controller(sess=sess, policy=policy, model=model,
                                     state_representation=state_representation, use_pid_mode=use_pid_mode, 
-                                    default_addrs=default_addrs, update_batch_size=config['training']['update_batch_size'], num_updates=config['training']['num_updates'], **config['roach'])
+                                    default_addrs=default_addrs, update_batch_size=config['testing']['update_batch_size'], num_updates=config['testing']['num_updates'], de=config['testing']['dynamic_evaluation'], **config['roach'])
 
     #do 1 rollout
     print("\n\n\nPAUSING... right before a controller run... RESET THE ROBOT TO A GOOD LOCATION BEFORE CONTINUING...")
@@ -514,51 +524,41 @@ def run(d):
 
     return
 
-def deep_dict_merge(x, y):
-    for k, v in y.items():
-        if k in x:
-            # Dictionary
-            if type(v) is dict:
-                for k2, v2 in v.items():
-                    if k2 in x[k]:
-                        x[k][k2] = v2
-            # Value
-            else:
-                x[k] = v
-    return x
 
-def main(args):
-
+def main(train, manual_edit_params, load_saved_params, saved_config_path, previous_dynamics_model):
     #################################
-    ## INIT config and vars
+    ######## Set parameters #########
     #################################
 
-    # Read in default config and edit as necessary 
-    default_config_path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'config.yaml')
-    config = yaml.load(open(default_config_path))
+    #read in default config
+    config = yaml.load(open("../config.yaml"))
 
-    if not args["train"]:
-        traintime_config = yaml.load(open(osp.join(args["model_path"], "saved_config.yaml")))
-        config = deep_dict_merge(config, traintime_config) # merges traintime_config into config
+    if load_saved_params: 
+        saved_config = yaml.load(open(saved_config_path, "r"))
+        #IPython.embed()
+        if train:
+            # replcae training config only
+            config["training"] = recursive_dict_merge(config["training"], saved_config["training"])
+        else:
+            # replace testing config only
+            config["testing"] = recursive_dict_merge(config["testing"], saved_config["testing"])
+            IPython.embed()
 
-    #IPython.embed()
     vg = VariantGenerator()
     vg.add('config', [config])
-    
-    if args["train"]:
+
+    if manual_edit_params:
         vg.add('meta_batch_size', [64]) ######### 64
         vg.add('meta_lr', [0.001])
         vg.add('update_batch_size', [23]) #[8, 4, 16, 20]
 
         vg.add('max_runs_per_surface', [5]) #396
         vg.add('num_updates', [1]) 
-        vg.add('update_lr', [0.1]) #[0.1, 1.0, 0.01]
+        vg.add('update_lr', [0.0]) #[0.1, 1.0, 0.01]
             # in learn_inner_loss = True, then it seems like this being large is unstable when learning these
                 #confirmed that if trainable=False on these though, then ulr=2 is same for learn_inner_loss True and learn_inner_loss False (this is just a sanity check)
             # this should be 2 for learn_inner_loss = False
-            # this should be 0.1 for learn_inner_lsos = True
-        
-        
+            # this should be 0.1 for learn_inner_loss = True
         vg.add("task_list", [["turf", "styrofoam", "carpet"]]) #"all"
         vg.add('max_epochs', [50]) 
         vg.add('num_sgd_steps', [1]) #[1, 5, 10]
@@ -577,47 +577,26 @@ def main(args):
         vg.add('use_clip', [True])
         vg.add("weight_initializer", ["xavier"])
         vg.add("dim_hidden", [[500, 500]]) #[500,500]
-        vg.add('num_extra', [7]) # Is this useful?
         vg.add('optimizer', ["adam"])
         vg.add('dim_bias', [5])
         vg.add('use_momentum', [False])
         vg.add('learn_inner_loss', [False]) 
-        
-    ##print("\n" + "**********" * 10 + "\nexp_prefix: {}\nvariants: {}".format('MAML', vg.size))
+
     for v in vg.variants():
-
         time.sleep(1.)
-
-        if args["train"]:
+        if manual_edit_params:
             _v = v.copy(); del _v['config'], _v['_hidden_keys']
-            v['config'] = replace_in_dict(v['config'], _v) # Makes a flat dictionary into a hierarchical dictionary (dict of dicts)
+            v['config'] = replace_in_dict(v['config'], _v)
 
-        v["save_dir"] = args["model_path"]
-        if not args["train"]:
-            # If testing, you can specify a rollout group
-            if args["rollout_group"]:
-                v["save_dir"] = osp.join(args["model_path"], args["rollout_group"]) 
+        if train:
+            # Want the testing parameters to match the training parameters, so you can easily load this saved config for testing
+            v['config']['testing'] = recursive_dict_merge(v['config']['testing'], v['config']['training'])
 
-        # If not testing, the below has no meaning. 
-        v["previous_dynamics_model"] = osp.join(args["model_path"], args["model_name"])
-        v["trajectory"] = args["trajectory"]
-        v["num_steps_per_rollout"] = args["num_steps_per_rollout"]
-        v["custom_rollout_foldername"] = args["custom_rollout_foldername"]
-        v["dynamic_evaluation"] = args[dynamic_evaluation]
-        ###########################
+        # Example foldername if training
+        #v['exp_name'] = "MAML_roach/9_11_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list']) + "_mlr_" + str(v['config']['training']['meta_lr']) + "_mbs_" + str(v['config']['testing']['meta_batch_size']) + "_num-sgd-steps_" + str(v['config']['training']['num_sgd_steps']) + '_reg_weight_' + str(v['config']['training']['regularization_weight']) + "_dim_bias_" + str(v['config']['model']['dim_bias']) + "_metatrain_lr_" + str(v['config']['training']['learn_inner_loss'])
 
-        #nongbac model, aggiter0, for testing
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper_dyneval"
-
-        #gbac model, aggiter0, for testing
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper"
-
-        #gbac model, aggiter1, for testing
-        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False_agg_0.5/rand"
-
-
-        ##################################################
-        # Runs function run() and passes it the dictionary "v"
+        # Example foldername if testing (i.e. you can place the rollouts in the same folder as the model used)
+        v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/video"
         run_experiment_lite(
             run,
             sync_s3_pkl=True,
@@ -635,24 +614,28 @@ def main(args):
         )
 
 if __name__ == "__main__":
-    ################################################################
-    #################### Fill out the below ########################
-    ################################################################
-    args = {}
+    """ NOTE TO USER: 
+    The training and testing workflow is as follows:
+    1) Specify if training or testing. Set train = False for testing. 
+    2) Specify if manually editing parameters (for train/test) and/or loading a saved config (this will copy the saved config's training AND testing parameters onto the default config).
+
+        For example: If I wanted to train with the same parameters that I used previously, except for batch_size, which I want to do hyperparameter search over, I would set train=True, manual_edit_params=True and load_saved_params=True and then specify the path to the saved config file. 
+        This will just copy the saved training params. 
+
+        Note: the config produced after training will have testing parameters equal to the training parameters, for ease of use.  
+
+        Another example: If I want to test a trained model, I set load_saved_params=True and specify in the saved_config.yml output by training. This will copy its testing params. 
+    3) Specify the name of the folder to save the trained model/testing data within the main function, as v["exp_name"]. If training, models, plotting, and formatted training data will be all be saved in that folder. If testing, then the rollout details will be saved in the folder/saved_rollouts.
+    4) If testing, this is the model to load. If training and curr_agg_iter != 0 (in other words, we're doing data aggregation), then this is the model to do additional training on top of. 
     
-    args["train"] = False # True if training, false if testing
-    # Model path: if testing, will save rollouts here. If training, will save trained models here. 
-    args["model_path"] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False"
+    Most of the params should be left as default, but you may need to change serial_port in config.yaml.
+    """
+    
+    train = False 
+    manual_edit_params = False 
+    load_saved_params = True
+    saved_config_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper/saved_rollouts/straight0_aggIter0/saved_config.yaml"
+    previous_dynamics_model = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"
 
-    # If testing, also fill these out:
-    args["rollout_group"] = "random_crap" # Saves rollout folder at model_path/rollout_group/"saved_rollouts"/custom_rollout_foldername
-    args["model_name"] = "model_aggIter0_epoch45" # Choose an epoch and an aggregation iteration among the models under model_path
-
-    args["trajectory"] = "straight" # The alias of the trajectory
-    args["num_steps_per_rollout"] = 135 
-    args["custom_rollout_foldername"] = None # Default: trajectory + str(smallest available integer)
-
-    args["dynamic_evaluation"] = False 
-    ################################################################
-
-    main(args)
+    
+    main(train, manual_edit_params, load_saved_params, saved_config_path, previous_dynamics_model)
