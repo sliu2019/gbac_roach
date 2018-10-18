@@ -9,21 +9,6 @@ Dependencies:
  * rllab at https://github.com/rll/rllab
  * ipython version **5.8.0**
 
-Before doing anything, first replace `gym/envs/box2d/lunar_lander.py` with the provided `lunar_lander.py` file.
-
-The only files that you need to look at are `dqn.py` and `train_ac_f18.py`, which you will implement.
-
-See the [HW3 PDF](http://rail.eecs.berkeley.edu/deeprlcourse/static/homeworks/hw3.pdf) for further instructions.
-
-The starter code was based on an implementation of Q-learning for Atari generously provided by Szymon Sidor from OpenAI.
 
 
-
-The only files you need to modify are launch_maml_train.py.
-
-Overview of the files;
-launch_maml_train.py: both trains and tests models 
-
-
-
-# Talk about what the directory structure of the data folders and trained model folders should be, and maybe include one as a sample
+The only file you need to modify is launch_maml_train.py, which both trains and tests models. See comments in the main() function for details. 

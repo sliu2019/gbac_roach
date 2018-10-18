@@ -32,24 +32,21 @@ class GBAC_Controller(object):
             model,
             use_pid_mode=True,
             state_representation='all',
-            frequency_value= 10,
-            serial_port= '/dev/ttyUSB0',
-            baud_rate= 57600,
             default_addrs= None,
             update_batch_size= 0,
             num_updates=1,
-            de=False,
-            x_index= 0,
-            y_index= 1
+            de=False, 
+            roach_config={}
     ):
+
         self.sess = sess
         self.policy = policy
         self.model = model
         self.state_representation = state_representation
         self.use_pid_mode = use_pid_mode
-        self.frequency_value = frequency_value
-        self.serial_port = serial_port
-        self.baud_rate = baud_rate
+        self.frequency_value = roach_config["frequency_value"]
+        self.serial_port = roach_config["serial_port"]
+        self.baud_rate = roach_config["baud_rate"]
         self.default_addrs = default_addrs
         self.update_batch_size = update_batch_size
         self.num_updates = num_updates
@@ -59,8 +56,8 @@ class GBAC_Controller(object):
         self.mocap_info = PoseStamped()
 
         #init vars
-        self.x_index = 0
-        self.y_index = 1
+        self.x_index = roach_config["x_index"]
+        self.y_index = roach_config["y_index"]
         
         #init node
         rospy.init_node('MAML_roach_controller_node', anonymous=True)
@@ -88,7 +85,6 @@ class GBAC_Controller(object):
     def kill_robot(self):
         stop_and_exit_roach(self.xb, self.lock, self.robots, self.use_pid_mode)
         #Prevents sys.exit(1) from being called at end
-        #stop_and_exit_roach_special(self.xb, self.lock, self.robots, self.use_pid_mode)
 
     def run(self,num_steps_for_rollout,desired_shape_for_rollout):
 
@@ -205,11 +201,9 @@ class GBAC_Controller(object):
             #create state from the info
             full_curr_state, _, _, _, _ = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, "all")
 
-            full_curr_state[2] = 0.035
-            ####### TO DO: remove this
+            #full_curr_state[2] = 0.035
             # full_curr_state[8]= 0.994
             # full_curr_state[9]=-0.109
-            #print(full_curr_state[9], full_curr_state[8])
 
             abbrev_curr_state, old_time, old_pos, old_al, old_ar = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, self.state_representation)
 

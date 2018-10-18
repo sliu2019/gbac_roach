@@ -5,8 +5,7 @@ from tensorflow.python.platform import flags
 from utils import *
 
 class DeterministicMLPRegressor(object):
-    def __init__(self, dim_input, dim_output, dim_hidden=(64, 64), dim_conv1d=(8, 8, 8), nonlinearity = "relu", norm='None', dim_obs=None,
-                 dim_bias=0, multi_input=0, tf_datatype=tf.float32, seed=None, weight_initializer = "truncated_normal"):
+    def __init__(self, dim_input, dim_output, dim_obs, tf_datatype, seed, weight_initializer, model_config, multi_input=0):
 
         # dims
         self.multi_input = multi_input
@@ -15,24 +14,21 @@ class DeterministicMLPRegressor(object):
         else:
             self.dim_input = dim_input
         self.dim_output = dim_output
-        self.dim_hidden = dim_hidden
-        self.dim_conv1d = dim_conv1d
+        self.dim_hidden = model_config["dim_hidden"]
+        self.dim_conv1d = model_config["dim_conv1d"]
         self.dim_obs = dim_obs
-        self.dim_bias = dim_bias
+        self.dim_bias = model_config["dim_bias"]
 
         # initializers
         self.weight_initializer_name = weight_initializer
         if weight_initializer == "xavier":
             self.weight_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype)
-            #self.bias_initializer = tf.zeros
             self.bias_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype)
         elif weight_initializer == "truncated_normal":
             self.weight_initializer = tf.truncated_normal
             self.bias_initializer = tf.zeros
 
         self.seed = seed
-        #IPython.embed() # check seed
-        #self.xavier_initializer = tf.contrib.layers.xavier_initializer(uniform=False, seed=seed, dtype=tf_datatype) ## 
         self.mean_initializer = np.zeros
         self.std_initializer = np.ones
         self.is_rnn = False
@@ -45,8 +41,9 @@ class DeterministicMLPRegressor(object):
         self.weights, self._inputs, self._output, self.output = None, None, None, None
         self._weights = None
 
-        self.norm = norm
+        self.norm = model_config["norm"]
 
+        nonlinearity = model_config["nonlinearity"]
         if nonlinearity == "relu":
             self.activation = tf.nn.relu
         elif nonlinearity == "tanh":
@@ -71,7 +68,6 @@ class DeterministicMLPRegressor(object):
         weights = dict()
         if self.dim_bias > 0:
             weights['bias'] = tf.Variable(self.bias_initializer([self.dim_bias]), name = 'bias')
-            #weights['bias'] = tf.Variable(self.xavier_initializer([self.dim_bias]), name='bias')
 
         # the 1st hidden layer
         if self.weight_initializer_name == "truncated_normal":
@@ -79,8 +75,6 @@ class DeterministicMLPRegressor(object):
         elif self.weight_initializer_name == "xavier":
             weights['W0'] = tf.Variable(self.weight_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]]), name='W0')
         weights['b0'] = tf.Variable(self.bias_initializer([self.dim_hidden[0]]), name = 'b0')
-        #weights['W0'] = tf.Variable(self.xavier_initializer([self.dim_input + self.dim_bias, self.dim_hidden[0]]), name='W0')
-        #weights['b0'] = tf.Variable(self.xavier_initializer([self.dim_hidden[0]]), name='b0')
 
         # intermediate hidden layers
         for i in range(0, len(self.dim_hidden)):
@@ -89,17 +83,13 @@ class DeterministicMLPRegressor(object):
             elif self.weight_initializer_name == "xavier":
                 weights['W' + str(i+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[i], self.dim_hidden[i]]), name='W'+str(i+1))
             weights['b' + str(i+1)] = tf.Variable(self.bias_initializer([self.dim_hidden[i]]), name='b'+str(i+1))
-            #weights['W' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i - 1], self.dim_hidden[i]]), name='W'+str(i))
-            #weights['b' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_hidden[i]]), name='b'+str(i))
 
         if self.weight_initializer_name == "truncated_normal":
             weights['W' + str(len(self.dim_hidden)+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output], stddev=0.01, seed=self.seed),  name='W' + str(len(self.dim_hidden)+1))
         elif self.weight_initializer_name == "xavier":
             weights['W' + str(len(self.dim_hidden)+1)] = tf.Variable(self.weight_initializer([self.dim_hidden[-1], self.dim_output]),  name='W' + str(len(self.dim_hidden)+1))
         weights['b' + str(len(self.dim_hidden)+1)] = tf.Variable(self.bias_initializer([self.dim_output]), name='b' + str(len(self.dim_hidden)+1))
-        #weights['W' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_hidden[-1], self.dim_output]), name='W' + str(len(self.dim_hidden)))
-        #weights['b' + str(len(self.dim_hidden))] = tf.Variable(self.xavier_initializer([self.dim_output]),name='b' + str(len(self.dim_hidden)))
-        
+    
         if meta_loss:
             for i in range(len(self.dim_conv1d)):
                 if self.weight_initializer_name == "truncated_normal":
@@ -107,10 +97,6 @@ class DeterministicMLPRegressor(object):
                 elif self.weight_initializer_name == "xavier":
                     weights['W_1d_conv' + str(i)] = tf.Variable(self.weight_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output]), name='W_1d_conv' + str(i))
                 weights['b_1d_conv' + str(i)] = tf.Variable(self.bias_initializer([self.dim_output]), name='b_1d_conv' + str(i))
-                #weights['W_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_conv1d[i], self.dim_output, self.dim_output]), name='W_1d_conv' + str(i))
-                #weights['b_1d_conv' + str(i)] = tf.Variable(self.xavier_initializer([self.dim_output]), name='b_1d_conv' + str(i))
-        #IPython.embed()
-        print(weights)
         return weights
 
     def forward_fc(self, inp, weights, reuse=False, meta_loss=False):

@@ -6,28 +6,29 @@ import IPython
 
 
 class MAML:
-    def __init__(self, regressor, dim_input, dim_output, learn_loss_weighting, train_config, test_config):
+    def __init__(self, regressor, dim_input, dim_output, config):
         """ must call construct_model() after initializing MAML! """
+        self.train_config = config["training"]
+        self.test_config = config["testing"]
+
         self.regressor = regressor
-        self.regressor.construct_fc_weights(meta_loss=train_config['meta_loss'])
+        self.regressor.construct_fc_weights(meta_loss=self.train_config['meta_loss'])
         self.forward = self.regressor.forward_fc
         
         self.dim_input = dim_input
         self.dim_output = dim_output
-        
-        self.train_config = train_config
-        self.test_config = test_config
 
-        self.update_lr = test_config['update_lr']
-        self.meta_lr = tf.placeholder_with_default(test_config['meta_lr'], ())
-        self.num_updates = test_config['num_updates']
-        self.num_sgd_steps = test_config['num_sgd_steps']
-        self.k = test_config['update_batch_size']
+        self.update_lr = self.test_config['update_lr']
+        self.meta_lr = tf.placeholder_with_default(self.test_config['meta_lr'], ())
+        self.num_updates = self.test_config['num_updates']
+        self.num_sgd_steps = self.test_config['num_sgd_steps']
+        self.k = self.test_config['update_batch_size']
         
         self.loss_func = mse
-        self.meta_learn_lr = train_config['learn_inner_loss']
-        self.regularization_weight = train_config['regularization_weight']
-        self.learn_loss_weighting = learn_loss_weighting
+        self.regularization_weight = self.train_config['regularization_weight']
+        
+        self.meta_learn_lr = config["model"]["meta_learn_lr"]        
+        self.learn_loss_weighting = config["model"]["learn_loss_weighting"]
         
 
     def construct_model(self, input_tensors=None, prefix='metatrain_'):
@@ -37,13 +38,13 @@ class MAML:
             # b: test data for meta gradient
         if input_tensors is None:
             self.inputa = tf.placeholder(self.regressor.tf_datatype,
-                          shape=(None, (self.config['update_batch_size']+self.num_sgd_steps-1), self.regressor.dim_input))
+                          shape=(None, (self.test_config['update_batch_size']+self.num_sgd_steps-1), self.regressor.dim_input))
             self.inputb = tf.placeholder(self.regressor.tf_datatype,
-                          shape=(None, self.config['update_batch_size'], self.regressor.dim_input))
+                          shape=(None, self.test_config['update_batch_size'], self.regressor.dim_input))
             self.labela = tf.placeholder(self.regressor.tf_datatype,
-                          shape=(None, (self.config['update_batch_size']+self.num_sgd_steps-1), self.regressor.dim_output))
+                          shape=(None, (self.test_config['update_batch_size']+self.num_sgd_steps-1), self.regressor.dim_output))
             self.labelb = tf.placeholder(self.regressor.tf_datatype,
-                          shape=(None, self.config['update_batch_size'], self.regressor.dim_output))
+                          shape=(None, self.test_config['update_batch_size'], self.regressor.dim_output))
         else:
             self.inputa = input_tensors['inputa']
             self.inputb = input_tensors['inputb']
@@ -132,7 +133,7 @@ class MAML:
                 # if taking more inner-update gradient steps
                 for j in range(num_updates - 1):
                     for i in range(self.num_sgd_steps):
-                        loss = self.loss_func(self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss']), labela[i:i+self.k], self.loss_weighting)
+                        loss = self.loss_func(self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.train_config['meta_loss']), labela[i:i+self.k], self.loss_weighting)
 
                         # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
                         grads = tf.gradients(loss, list(fast_weights.values()))
@@ -207,7 +208,7 @@ class MAML:
 
         # The reg term needs to be specific to each num_update 
 
-        if self.config['use_reg']:
+        if self.train_config['use_reg']:
             self.total_losses2 = [tf.reduce_mean(lossesb[j] + self.norms_of_weights[j]) for j in range(num_updates)]
         else: 
             self.total_losses2 = [tf.reduce_mean(lossesb[j]) for j in range(num_updates)]
@@ -230,17 +231,17 @@ class MAML:
         labela = labela[0]
 
         ##############################################################
-        test_optimizer = tf.train.MomentumOptimizer(self.update_lr, self.config['momentum'], use_nesterov = False)
+        test_optimizer = tf.train.MomentumOptimizer(self.update_lr, self.train_config['momentum'], use_nesterov = False)
         ##############################################################
 
         for i in range(self.num_sgd_steps): # This used to say multi-updates???
-            task_outputa = self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])
+            task_outputa = self.forward(inputa[i:i+self.k], fast_weights, reuse=True, meta_loss=self.train_config['meta_loss'])
             # calculate loss(f_weights{0}(inputa))
             task_lossa = self.loss_func(task_outputa, labela[i:i+self.k], self.loss_weighting)
             # weights{1} = use loss(f_weights{0}(inputa)) to take a gradient step on weights{0}
             
             ##############################################################
-            if self.config['use_momentum']:
+            if self.train_config['use_momentum']:
                 grads = test_optimizer.compute_gradients(task_lossa, var_list = list(fast_weights.values()))
                 grads = [x[0] for x in grads]
             else:
@@ -248,7 +249,6 @@ class MAML:
 
             ##############################################################
             gradients = dict(zip(fast_weights.keys(), grads))
-            #IPython.embed()
             
             if self.meta_learn_lr:
                 fast_weights = dict(
@@ -266,16 +266,16 @@ class MAML:
         #UPDATE weights{0} using loss(f_weights{last_step}(inputb))
             #each inner update was done on K points (to calculate each theta')
             #this outer update is done using metaBS*K points
-        if self.config['optimizer'] == "adam":
+        if self.train_config['optimizer'] == "adam":
             optimizer = tf.train.AdamOptimizer(self.meta_lr)
-        elif self.config['optimizer'] == "momentum":
+        elif self.train_config['optimizer'] == "momentum":
             optimizer = tf.train.MomentumOptimizer(self.meta_lr, 0.9)
 
         ##################### #this is just one gradient step (ie normal training)
         ##################### #used for debugging other parts of code
         ##############self.gvs = gvs = optimizer.compute_gradients(self.total_loss1) 
-        self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[self.config['num_updates']-1]) #this is real maml loss func (ie adapt)
-        if self.config['use_clip']:
+        self.gvs = gvs = optimizer.compute_gradients(self.total_losses2[self.train_config['num_updates']-1]) #this is real maml loss func (ie adapt)
+        if self.train_config['use_clip']:
             self.gvs = gvs = [(tf.clip_by_value(grad, -10., 10.), var) for grad, var in gvs]
 
         self.metatrain_op = optimizer.apply_gradients(gvs)
