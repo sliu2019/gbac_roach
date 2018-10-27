@@ -96,36 +96,6 @@ class NaiveMPCController(Policy, Serializable):
     def get_random_action(self, n):
         return self.action_space.sample_n(n)
 
-    '''def get_best_action_OLD(self, observation, actions=None):
-        n = self.n_candidates
-        m = len(observation)
-        R = np.zeros((n*m,))
-
-        #randomly sample n sequences of length-h actions (for multiple envs in parallel)
-            #[h, N, ac_dim]
-        a = self.get_random_action(self.horizon*n*m).reshape((self.horizon, n*m, -1))
-
-        #simulate the action sequences
-        for h in range(self.horizon):
-            if h == 0:
-                cand_a = a[h].reshape((m,n,-1)) #[1, N, ac_dim]
-                observation = np.array(observation).reshape((m,1,-1)) #goes from [1,obs_dim] --> [1, 1, obs_dim]
-                observation = np.tile(observation, (1,n,1)).reshape((m*n, -1)) # tiled observations, so [N, obs_dim]
-            if(self.state_representation=='exclude_x_y'):
-                next_observation = self.regressor.predict(np.concatenate([observation[:,2:], a[h]], axis=1)) + observation
-            else:
-                next_observation = self.regressor.predict(np.concatenate([observation, a[h]], axis=1)) + observation
-                #observation    [1000 x 21]
-                #a[h]           [1000 x 5]
-                #after concat   [1000 x 26]
-                #output of predict  [1000x 21]
-            r = self.get_reward(observation, next_observation, a[h])
-            R += r
-            observation = next_observation
-        R = R.reshape(m,n)
-        #return the action from the sequence that resulted in highest reward
-        return cand_a[range(m), np.argmax(R, axis=1)]'''
-
     ############################################
     ##### GET BEST ACTION
     ############################################

@@ -465,12 +465,13 @@ def main(train_bool, manual_edit_params, load_saved_params, saved_config_path):
 
     if manual_edit_params:
         # For testing, you must fill out: 
-        vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
+        #vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
+        vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
         vg.add('restore_previous_dynamics_model', [False])
 
         # For testing, please customize these:
         vg.add('num_steps_per_rollout', [100])
-        vg.add('desired_shape_for_rollout', ["right"])
+        vg.add('desired_shape_for_rollout', ["straight"])
         vg.add('save_rollout_run_num', [0])
 
         vg.add('meta_batch_size', [64]) 
@@ -517,7 +518,9 @@ def main(train_bool, manual_edit_params, load_saved_params, saved_config_path):
         #v['exp_name'] = "MAML_roach/9_11_optimization/" + "_ubs_" + str(v['config']['training']['update_batch_size']) + "_ulr_" + str(v['config']['training']['update_lr']) + "num_updates" + str(v['config']['training']['num_updates']) + "_layers_" + str(len(v['config']['model']['dim_hidden'])) + "_x" + str((v['config']['model']['dim_hidden'])[0]) + "_task_list_" + "_".join(v['config']['training']['task_list']) + "_mlr_" + str(v['config']['training']['meta_lr']) + "_mbs_" + str(v['config']['testing']['meta_batch_size']) + "_num-sgd-steps_" + str(v['config']['training']['num_sgd_steps']) + '_reg_weight_' + str(v['config']['training']['regularization_weight']) + "_dim_bias_" + str(v['config']['model']['dim_bias'])
 
         # Example foldername if testing (i.e. you can place the rollouts in the same folder as the model used)
-        v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/video"
+        #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/video"
+
+        v['exp_name'] = "/home/anagabandi/roach_workspace/src/gbac_roach/videos/gbac/shell_weight"
 
         v['train_bool'] = train_bool
         run_experiment_lite(
@@ -559,9 +562,12 @@ if __name__ == "__main__":
     4) If testing, this is the model to load. If training and curr_agg_iter != 0 (in other words, we're doing data aggregation), then this is the model to do additional training on top of. 
     
     Most of the params should be left as default, but you may need to change serial_port in config.yaml.
+    Some things to change include;
+        - The heuristics for the reward function in config.yaml, or vg.add(*) them
+        - The USB port name that the zigbee is connected to in config.yaml
     """
     
-    train_bool = True 
+    train_bool = False 
     manual_edit_params = True 
     load_saved_params = False
     saved_config_path = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/paper/saved_rollouts/straight0_aggIter0/saved_config.yaml"

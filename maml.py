@@ -8,6 +8,7 @@ import IPython
 class MAML:
     def __init__(self, regressor, dim_input, dim_output, config):
         """ must call construct_model() after initializing MAML! """
+        self.config = config
         self.train_config = config["training"]
         self.test_config = config["testing"]
 
