@@ -142,6 +142,7 @@ class NaiveMPCController(Policy, Serializable):
         ###################################################################
         ### check if curr point is closest to curr_line_segment or if it moved on to next one
         ###################################################################
+        #IPython.embed()
 
         curr_start = desired_states[curr_line_segment]
         curr_end = desired_states[curr_line_segment+1]
@@ -247,6 +248,7 @@ class NaiveMPCController(Policy, Serializable):
             curr_start = desired_states[curr_seg]
             curr_end = desired_states[curr_seg+1]
             next_start = desired_states[curr_seg+1]
+            #IPython.embed()
             next_end = desired_states[curr_seg+2]
 
             #vars... for each sim

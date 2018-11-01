@@ -52,16 +52,16 @@ from roach_utils import *
 
 save_rollout = False 
 
-task_type='junk_david'
+task_type='iclr_video'
 serial_port = '/dev/ttyUSB0'
 num_rollouts = 1 ####5
-rollout_length= 150
+rollout_length= 100
 use_camera = False #True
 left_verify = False
 
 use_pid_mode = True
 slow_pid_mode = True
-use_joystick= True ##False
+use_joystick= False
 print_frequency = 10
 baud_rate = 57600
 DEFAULT_ADDRS = ['\x00\x01']
@@ -251,7 +251,8 @@ def run(run_num):
   #publish_saveimagecmds.publish("purge_list")
 
   while(step<rollout_length):
-    
+    print(step)
+    print(rollout_length)
 
     if(step%print_frequency==0):
       shouldPrint=True
@@ -332,8 +333,8 @@ def run(run_num):
         robot_info = velroach_msg()
         robot_info.stamp = rospy.Time.now()
         print(robot_info.curLeft, robot_info.curRight)
-        robot_info.curLeft = abs(int(selected_action[0]))
-        robot_info.curRight = abs(int(selected_action[1]))
+        robot_info.curLeft = selected_action[0]
+        robot_info.curRight = selected_action[1]
         robot_info.posL = d[2]
         robot_info.posR = d[3]
         robot_info.gyroX = d[8]

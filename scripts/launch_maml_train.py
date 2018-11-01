@@ -465,22 +465,24 @@ def main(train_bool, manual_edit_params, load_saved_params, saved_config_path):
 
     if manual_edit_params:
         # For testing, you must fill out: 
-        #vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
-        vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
-        vg.add('restore_previous_dynamics_model', [False])
+        
+        vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
+        #vg.add('previous_dynamics_model', ["/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_7_optimization/_ubs_23_ulr_2.0num_updates2_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/model_aggIter0_epoch45"])
+        vg.add('restore_previous_dynamics_model', [True])
 
         # For testing, please customize these:
-        vg.add('num_steps_per_rollout', [100])
+        vg.add('num_steps_per_rollout', [110])
         vg.add('desired_shape_for_rollout', ["straight"])
-        vg.add('save_rollout_run_num', [0])
+        vg.add('save_rollout_run_num', [1])
+        vg.add('dynamic_evaluation', [True]) #####~!!!!!!!!!!!!!!!!!!
 
         vg.add('meta_batch_size', [64]) 
         vg.add('meta_lr', [0.001])
         vg.add('update_batch_size', [23])
 
         vg.add('max_runs_per_surface', [5]) #396
-        vg.add('num_updates', [2]) 
-        vg.add('update_lr', [2.0]) 
+        vg.add('num_updates', [1]) 
+        vg.add('update_lr', [0.1]) 
         vg.add("task_list", [["all"]]) #"all"
         vg.add('max_epochs', [50]) 
         vg.add('num_sgd_steps', [1]) 
@@ -490,7 +492,7 @@ def main(train_bool, manual_edit_params, load_saved_params, saved_config_path):
         vg.add('curr_agg_iter', [0]) #0, 1, 2, etc
 
         # Misc
-        vg.add('horizon', [396]) # Set to 5 to begin testing
+        vg.add('horizon', [5]) #
         vg.add('use_reg', [True]) 
         vg.add('seed', [0]) 
         vg.add('nonlinearity', ['relu'])
@@ -520,7 +522,7 @@ def main(train_bool, manual_edit_params, load_saved_params, saved_config_path):
         # Example foldername if testing (i.e. you can place the rollouts in the same folder as the model used)
         #v['exp_name'] = "/home/anagabandi/rllab-private/data/local/experiment/MAML_roach/9_11_optimization/_ubs_23_ulr_0.0num_updates1_layers_2_x500_task_list_turf_styrofoam_carpet_mlr_0.001_mbs_64_num-sgd-steps_1_reg_weight_0.001_dim_bias_5_metatrain_lr_False/video"
 
-        v['exp_name'] = "/home/anagabandi/roach_workspace/src/gbac_roach/videos/gbac/shell_weight"
+        v['exp_name'] = "/home/anagabandi/roach_workspace/src/gbac_roach/videos/de/shell_shift"
 
         v['train_bool'] = train_bool
         run_experiment_lite(

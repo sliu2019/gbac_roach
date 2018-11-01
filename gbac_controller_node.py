@@ -201,9 +201,9 @@ class GBAC_Controller(object):
             #create state from the info
             full_curr_state, _, _, _, _ = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, "all")
 
-            #full_curr_state[2] = 0.035
-            # full_curr_state[8]= 0.994
-            # full_curr_state[9]=-0.109
+            full_curr_state[2] = 0.035
+            full_curr_state[8]= 0.994
+            full_curr_state[9]=-0.109
 
             abbrev_curr_state, old_time, old_pos, old_al, old_ar = singlestep_to_state(robotinfo, self.mocap_info, old_time, old_pos, old_al, old_ar, self.state_representation)
 

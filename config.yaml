@@ -109,6 +109,6 @@ policy:
     n_candidates: 2000                   # Number of candidates actions when performing MPC
     horizon: 5                          # Horizon of the planning in the MPC
     test_regressor: False
-    horiz_penalty_factor: 30
+    horiz_penalty_factor: 40
     backward_discouragement: 10
     heading_penalty_factor: 5      #40,10,10 zigzag, everything else is 50,10,5 ################# 50, 5, 15 for front r leg missing

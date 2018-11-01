@@ -99,7 +99,7 @@ class MAML:
                 for i in range(self.num_sgd_steps):
                     
                     #f_theta_i(inputa_chunk_i)
-                    task_outputa = self.forward(inputa[i:i + self.k], fast_weights, reuse=True, meta_loss=self.config['meta_loss'])  # only reuse on the first iter
+                    task_outputa = self.forward(inputa[i:i + self.k], fast_weights, reuse=True, meta_loss=self.train_config['meta_loss'])  # only reuse on the first iter
                     #L(f_theta_i(inputa_chunk_i))
                     task_lossa = self.loss_func(task_outputa, labela[i:i+self.k], self.loss_weighting)
 
